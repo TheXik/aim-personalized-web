@@ -102,6 +102,14 @@ describe("the mailto link", () => {
     expect(body).toContain("Time: 2026-11-03T12:00:00.000Z")
   })
 
+  it("never cuts an emoji in half (it would throw and blank the page)", () => {
+    const request = "x".repeat(59) + "😡 this is useless"
+    const href = contactMailto({ request, page: "p", settings: [], time: "t" })!
+    const subject = new URLSearchParams(href.slice(href.indexOf("?") + 1)).get("subject")!
+    expect(subject).toBe(`Aim brief: "${"x".repeat(59)}😡..."`)
+    expect(() => contactMailto({ request: "😡".repeat(600), page: "p", settings: [], time: "t" })).not.toThrow()
+  })
+
   it("works without a request for the always-visible link, and hides without an address", () => {
     const href = contactMailto({ page: "/brief/cz-sk-ai", settings: [], time: "t" })!
     expect(new URLSearchParams(href.slice(href.indexOf("?") + 1)).get("subject")).toBe("Aim brief feedback")

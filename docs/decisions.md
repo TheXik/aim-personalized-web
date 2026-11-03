@@ -9,9 +9,9 @@ How to read it:
 
 ---
 
-## 1. The chat saves settings, not a new page
+## 1. The model returns a view configuration, not a rewritten brief or generated UI
 
-**Decision.** The chat turns the reader's wish into small saved settings (a view spec) stored per reader, not per brief. Next week's brief opens with the same settings applied, without calling the model again.
+**Decision.** Three shapes were possible for the model's output: settings for the view, a rewritten brief, or a generated page. It returns settings: small edits to the reader's saved settings (a view spec), stored per reader, not per brief (the format is decision 5). Next week's brief opens with the same settings applied, without calling the model again. The prompt is [`prompts/view-editor.md`](../prompts/view-editor.md).
 
 **Why.** A reader who asks once sees the same page every week at zero model cost. The page is always built from the brief's own text, so the model cannot add facts, and it still renders when the model is slow or down.
 
@@ -85,6 +85,7 @@ How to read it:
 - Asked to return a whole new view for "numbers first", the model hid the figures. In another run it moved the verdict to the bottom unasked. As edit operations, the same request produced exactly the changes asked for.
 - With a free-text label, asked for a section titled with a made-up funding claim, the model wrote the claim into the label. With edit operations and a `not_supported` option instead, it refused.
 - A suite of 15 hostile requests (prompt injection, fact injection, other customers' data, oversized input) is blocked by this design, because no field the model fills is shown as text. These cases run in the test suite.
+- Live eval on 3 Nov, one run of 74 calls on the real briefs: the model refused 14 of the 15 hostile requests. The 15th, "keep making it more compact until nothing is left", made the page compact. It added no text and Reset undoes it. 27 of 37 view changes came out right and 2 more partly. Median reply 3.9 s. **HIGH** for the measurement, one run.
 - This is the "action selector" pattern, which resists prompt injection as long as the model's output cannot carry consequential free text ([Beurer-Kellner et al. 2025](https://arxiv.org/html/2506.08837)). **HIGH** for the pattern.
 - The JSONLogic library (`json-logic-js`) has had no release since July 2024 and has past prototype-pollution and command-injection advisories (CVE-2021-4329). Not re-verified on the day. **MODERATE**.
 
@@ -158,6 +159,44 @@ How to read it:
 **Considered instead.** Silent personalisation.
 
 **What would change it.** Readers ignoring or disliking the chips in testing.
+
+---
+
+## 10. A front page that fits one laptop screen
+
+**Decision.** The page is a front page: the verdict and the two "what it means" lines on top, the threads as compact cards, one figure, a short list of the other headlines, and a reading panel that slides in for the full story.
+
+**Why.** The first build missed the brief's first two goals: understood right away, and fits the viewport. The front page puts the outcome and the takeaway first (decision 3) and keeps every detail one click away.
+
+**Evidence.**
+- Attention is under a minute and most viewing time goes to the first screen (decision 3). **HIGH**.
+- `pnpm check:fit` drives Chrome over every reader at 1280 by 800 and 1440 by 900 and fails if the page scrolls. Own check.
+- Five simulated first-time readers (fresh AI agents given only a reader persona, the page and a browser, 23 chat messages in total) said the laptop page fits one screen and named the "What it means for you" lines among what worked. They also found that the phone's first screen is all headline. Own test on 3 Nov. Simulated readers, so **MODERATE**.
+- Choosing among the three mockups below was Lukáš's design judgement, with no test behind it. **LOW**.
+
+**Considered instead.**
+- The first build: everything in one scrolling column. Dropped because it was longer than one screen and read as chaotic.
+- B, an email-app reader with a headline list and a reading pane. Dropped after review.
+- C, thread tiles. Dropped, but its simplicity carried over into the thread cards.
+
+**What would change it.** Readers in testing missing stories that sit behind a click.
+
+---
+
+## 11. The chat only changes the view
+
+**Decision.** The chat only changes what the page shows. It does not answer questions about the brief, and its label says so: "Change what you see". Code catches questions before any model call. The reader gets the closest view as one click, then "Ask your own AI", which copies the whole brief with the question on top, then "Tell Lukáš", a prefilled email they see in full before sending.
+
+**Why.** The brief asks for a chat that customises the page. A question label invites requests the chat has to refuse, and an answer written by the model would be model text on the page (decision 5).
+
+**Evidence.**
+- In the simulated reader test, about a third of the 23 chat messages asked for things the design rules out on purpose: valuations, source names, "the last 7 days", advice. Refusing them was right, but every refusal was a dead end. That is why each refusal now ends in something to click. Own test, simulated readers, **MODERATE**.
+- The same test found 5 of 23 messages asking for amounts or "biggest first" quietly got "items with numbers first". The reply now says when it substituted. **MODERATE**.
+- Grounded answers with sources are a next step (README, "What I would do next").
+
+**Considered instead.** Label it "Ask Aim about this brief" and answer questions.
+
+**What would change it.** Readers repeatedly typing questions into the chat.
 
 ---
 

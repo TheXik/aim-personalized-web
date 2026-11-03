@@ -1,8 +1,8 @@
 # Aim weekly brief, personalised
 
-A page of Aim's web app that shows one reader their weekly market brief, designed to fit the screen on a laptop, a tablet and a phone.
-Next to it is a chat where the reader reshapes the page in plain language ("numbers first", "hide the one-liners"). The change is saved as small settings and applies to every later brief without calling the model again.
-The model never writes text that reaches the page. Every word comes from Aim's brief or from fixed copy in the code, so it cannot add facts, and the page still works when the model is slow, wrong or down.
+A page of Aim's web app that shows one reader their weekly market brief as a front page that fits one screen: the verdict, what it means for them, the threads they follow, one figure and the other headlines. Every full story is one click away in a reading panel. Laptop, tablet and phone each have their own layout.
+Next to it is a chat, "Change what you see", where the reader reshapes the page in plain language ("numbers first", "hide the one-liners"). The change is saved as small settings and applies to every later brief without calling the model again.
+The model never writes text that reaches the page. Every word comes from Aim's brief or from fixed copy in the code, so it cannot add facts. If the model is slow, makes a mistake or is offline, the page keeps working on saved settings and built-in shortcuts.
 
 Built by Lukáš Hellesch as the Aim hiring take-home, 3 Nov 2026. Why each choice was made, with evidence: [docs/decisions.md](docs/decisions.md).
 
@@ -60,9 +60,10 @@ pnpm dev                      # http://localhost:3000
 To turn on the live chat, put your key after `AZURE_OPENAI_API_KEY=` in `.env.local` and set `CHAT_LIVE=1`. Then restart `pnpm dev`. `MODEL_BUDGET_USD` sets the daily spend cap (see [Spend caps](#spend-caps)).
 
 **Works without a key** (with the three briefs in `data/briefs/`):
-- All three reader pages, every figure type, the phone, tablet and laptop layouts.
+- All three reader pages, the front page and the reading panel, every figure type, the phone, tablet and laptop layouts.
 - Saved settings that survive a reload, the setting chips, Reset, and "Copy for your agent".
-- The chat for the brief's four example requests, which are also the suggestion chips: "Only what is new this week", "Numbers first", "Hide the one-liners", "Group it by company". Built-in shortcuts also cover "group by thread", "group by topic", "headlines only", "newest first" and "reset". A request only uses a shortcut when every part of it matches one.
+- The chat for the brief's four example requests, which are also the suggestion chips: "Only what's new this week", "Numbers first", "Hide the one-liners", "Group it by company". Built-in shortcuts also cover "group by thread", "group by topic", "headlines only", "newest first", "hide the threads", "hide the figures", "hide the sources" and "reset". A request only uses a shortcut when every part of it matches one.
+- Questions about the brief, "Ask your own AI" and "Tell Lukáš" (see [How the chat works](#how-the-chat-works)). None of them call the model.
 
 **Needs the key and `CHAT_LIVE=1`:** any other request, for example "Put Isar, RFA and Sirius at the top" or "hide the data-center thread". Without the model the chat says so and leaves the page as it was.
 
@@ -84,8 +85,10 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 4. Code writes the chat reply from the change: what changed, which items matched, how many are hidden. No model text reaches the page.
 5. The settings are saved per reader in the browser (`localStorage`, key `aim.view.v1.<reader>`). They apply to every later brief with no model call. Settings about a field last forever, settings about a thread last while that thread exists, and settings about one item expire with the week. Reset returns to the default design.
 6. If the model is off, times out after 15 seconds, is blocked by Azure's content filter or is over budget, the chat uses a built-in shortcut when the whole request matches one. Otherwise it leaves the page unchanged and says why.
+7. The chat only changes the view. It does not answer questions, on purpose (decision 11). Code catches questions such as "who led Nscale's round?" before any model call, so they cost nothing. The reader gets the closest view as one click (the companies or areas they named), then "Ask your own AI", which copies the whole brief as Markdown with their question on top, for the assistant they already use.
+8. When the chat cannot help, or the reader sounds frustrated (their words, capitals, "!!!", or two declines in a row), it offers "Tell Lukáš": a prefilled email with the request, the page, the active settings and the time. The reader sees all of it in their own mail app before anything is sent. The link also sits under the chat input. Every declined request is logged without IP or cookie, so the roadmap comes from what readers asked for.
 
-**The prompt is in [`prompts/view-editor.md`](prompts/view-editor.md).** The operations are defined in `lib/view/ops.ts`, the settings in `lib/view/spec.ts`, and the pure function from (brief, settings) to page in `lib/view/engine.ts`.
+**The chat prompt is in [`prompts/view-editor.md`](prompts/view-editor.md).** The one-time company tagging prompt is in [`prompts/company-tags.md`](prompts/company-tags.md). The operations are defined in `lib/view/ops.ts`, the settings in `lib/view/spec.ts`, and the pure function from (brief, settings) to page in `lib/view/engine.ts`.
 
 ## Spend caps
 
@@ -93,31 +96,36 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 - **Daily cap.** The live site may spend at most $10 per UTC day (`MODEL_BUDGET_USD` in `wrangler.jsonc`, and the code never allows more on Cloudflare). Dev, tests and evals default to $0.10 and never go above $0.20. Each call reserves its worst-case cost before it is sent (prompt bytes as an upper bound on input tokens, 2,000 output tokens, list price plus 20%), and a call that could cross the cap is never sent. After the call the reservation is settled to the real cost.
 - **Where spend is counted.** In `.model-spend.json` locally and in a Cloudflare D1 table on the live site. If there is no safe place to count, no call is made.
 - **Rate limits.** 8 chat requests per minute per client, 30 model calls per minute across all clients, requests capped at 500 characters, 15 second timeout, no automatic retries.
-- **Eval.** `pnpm eval` runs the 75 research requests offline for free. It needs the briefs in `data/briefs/` and says it skipped otherwise. The live run (`EVAL_APPROVED=1 pnpm eval -- --live`) prints its call count first and refuses to start without that flag.
+- **Eval.** `pnpm eval` runs the 75 research requests offline for free. It needs the briefs in `data/briefs/` and says it skipped otherwise. The live run (`EVAL_APPROVED=1 pnpm eval -- --live`) prints its call count first and refuses to start without that flag. It also runs as a manual GitHub workflow that waits for Lukáš's approval.
+- **Live eval result, 3 Nov.** 74 calls through `gpt-5-mini-hiring`, about 4 cents. 27 of 37 view changes came out right (2 more partly). 14 of 15 hostile requests were refused. The 15th, "keep making it more compact until nothing is left", made the page compact. It added no text, and Reset undoes it. Median reply time 3.9 s.
 
 ## Project map
 
 | Path | What it holds |
 |---|---|
-| `app/brief/[reader]/` | The reader page |
+| `app/brief/[reader]/` | The reader page (old `/r/<reader>` links redirect here) |
 | `app/api/briefs/[reader]/` | The brief endpoint |
 | `app/api/chat/` | The chat route and its rate limits |
-| `components/` | The brief, figures and chat UI |
+| `components/` | The front page, reading panel, figures and chat UI |
 | `lib/brief/` | Schema and normalisation of Aim's brief JSON |
+| `lib/front/` | Which stories, threads and figure make the front page |
 | `lib/view/` | Settings, rules, engine, edit operations, reply writer |
-| `lib/chat/` | Chat handling and the offline shortcuts |
+| `lib/chat/` | Chat handling, offline shortcuts, question and frustration checks, the "Tell Lukáš" link |
+| `lib/export/` | Markdown for "Copy for your agent" and "Ask your own AI" |
 | `lib/ai/` | The Azure call and the spend ledger |
+| `lib/infra/` | Password gate and the decline log |
 | `prompts/` | The model prompt |
 | `tests/` | Engine, request-suite, hostile-input and carry-over tests, plus the eval |
 | `docs/decisions.md` | Every decision with its reasoning and evidence |
+| `docs/DEPLOY.md` | How the live site is deployed |
 
 The live site runs on Cloudflare Workers through OpenNext.
 
 ## What I would do next
 
 1. **An MCP tool for the reader's personal view.** "Copy for your agent" already exports the reader's view as Markdown with links, every word from the brief. An MCP tool would let the reader's own agent fetch that view directly, with their settings applied.
-2. **Questions about the brief, answered only from the brief.** Today the chat only changes the view, on purpose, because that is what the assignment asks for. Next, readers could ask questions such as "who led the biggest round this week?" and get answers built only from this week's brief, each sentence linked to the item or update it comes from, with a code check that every name and number in the answer appears in the brief. It would also give a home to the requests the chat declines today because they need new text: 6 of the 60 realistic test requests.
+2. **Questions about the brief, answered only from the brief.** Today the chat only changes the view, on purpose, because that is what the assignment asks for, and it hands questions to the reader's own AI with the brief attached. Next, readers could ask questions such as "who led the biggest round this week?" and get answers built only from this week's brief, each sentence linked to the item or update it comes from, with a code check that every name and number in the answer appears in the brief. It would also give a home to the requests the chat declines today because they need new text: 6 of the 60 realistic test requests.
 3. **Company ids in Aim's API.** Today companies are tagged once per brief with gpt-5-mini and checked word for word against each item. Ids from Aim's own pipeline would make "group by company" exact and unlock "rounds, biggest first" with no model at all.
 4. **Settings saved per user on the server.** They live in the browser now. A versioned row per reader would follow them across devices and make the Monday email open with the same view.
-5. **The live model check in CI.** Run the 75-request suite through the real model on every prompt change, under its own spend cap, and fail the build when coverage drops. Today the suite proves what the settings can express, not how often the model gets it right.
-6. **More design rounds with real readers.** Five readers of each type with their own brief, a log of every request the chat cannot handle (it is already written to the server log as `unmet`), and Aim's device data to confirm that the laptop should stay the main stage.
+5. **Fix the misses from the live eval, then gate on it.** The one live run got 27 of 37 view changes right. Each of the 10 misses gets a look: a prompt fix, a missing setting, or a test expectation that was wrong. Then the live run goes on every prompt change under its own spend cap and fails the build when the score drops.
+6. **More design rounds with real readers.** Five readers of each type with their own brief, the decline log of every request the chat could not do, and Aim's device data to confirm that the laptop should stay the main stage.

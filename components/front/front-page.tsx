@@ -215,7 +215,7 @@ function AlsoThisWeek({
 
 function groupWord(view: PageView): string {
   const source = view.sections.find((s) => s.kind === "group")?.titleSource
-  return source === "company" ? "company" : source === "current" ? "thread" : source === "scope" ? "area" : "group"
+  return source === "company" ? "company" : "area"
 }
 
 /**

@@ -105,7 +105,7 @@ export function ReadingPanel({
         {story ? (
           <StoryBody story={story} parts={parts} showUpdates={showUpdates} heading={heading} threads={threads} onOpen={onOpen} />
         ) : thread ? (
-          <ThreadBody thread={thread} order={order} heading={heading} onOpen={onOpen} index={threads.indexOf(thread)} />
+          <ThreadBody thread={thread} order={order} parts={parts} heading={heading} onOpen={onOpen} index={threads.indexOf(thread)} />
         ) : reading.kind === "more" ? (
           <MoreBody items={moreItems} heading={heading} onOpen={onOpen} />
         ) : (
@@ -183,12 +183,14 @@ function StoryBody({
 function ThreadBody({
   thread,
   order,
+  parts,
   heading,
   onOpen,
   index,
 }: {
   thread: Current
   order: Item[]
+  parts: Parts
   heading: React.RefObject<HTMLHeadingElement | null>
   onOpen: (r: Reading) => void
   index: number
@@ -201,13 +203,15 @@ function ThreadBody({
         <span className="rp__idx">{String(index + 1).padStart(2, "0")}</span>
         <StatusMark status={thread.status} raw={thread.statusRaw} />
         {thread.sinceLabel ? <span>{thread.sinceLabel}</span> : null}
-        {thread.sources.length > 0 ? <span>{thread.sources.length === 1 ? "1 signal" : `${thread.sources.length} signals`}</span> : null}
+        {parts.sources && thread.sources.length > 0 ? (
+          <span>{thread.sources.length === 1 ? "1 signal" : `${thread.sources.length} signals`}</span>
+        ) : null}
       </div>
       <h2 className="rp__headline" id="rp-h" ref={heading} tabIndex={-1}>
         {thread.label}
       </h2>
       <p className="rp__lede">{thread.line}</p>
-      {thread.figure ? <Figure figure={thread.figure} threadLabel={thread.label} /> : null}
+      {thread.figure && parts.figures !== "hide" ? <Figure figure={thread.figure} threadLabel={thread.label} /> : null}
       <div className="rp__list">
         <span className="eyebrow">{stories.length === 1 ? "1 story in this thread" : `${stories.length} stories in this thread`}</span>
         <ul>
@@ -222,7 +226,7 @@ function ThreadBody({
         </ul>
         {hidden > 0 ? <p className="rp__note">{hidden === 1 ? "1 more story is hidden by your view." : `${hidden} more stories are hidden by your view.`}</p> : null}
       </div>
-      {thread.sources.length > 0 ? <Sources links={thread.sources} label="Signals" /> : null}
+      {parts.sources && thread.sources.length > 0 ? <Sources links={thread.sources} label="Signals" /> : null}
     </article>
   )
 }

@@ -5,7 +5,9 @@ import type { Current, Item } from "@/lib/brief/types"
 import type { PageView } from "@/lib/view/model"
 import type { FrontPage as FrontModel, Hook } from "@/lib/front/front-page"
 import { Figure } from "@/components/figures/figure"
-import type { Reading } from "@/components/reader/reading-panel"
+import { Sources, type Reading } from "@/components/reader/reading-panel"
+import { StatusMark } from "@/components/brief/kicker"
+import { formatDay } from "@/components/brief/format"
 
 // The one-screen front page. Five sections, each its own component, so any one
 // can be removed by deleting one line in <FrontPage>. The layout closes the gap.
@@ -20,15 +22,12 @@ export function FrontPage({
   fp,
   also,
   onOpen,
-  stacked,
   inert,
 }: {
   view: PageView
   fp: FrontModel
   also: Item[]
   onOpen: Open
-  // Phone and tablet portrait: sections open in place instead of in the reading panel.
-  stacked: boolean
   // While the reading panel is open the page behind it is out of reach for keyboard and screen readers.
   inert: boolean
 }) {
@@ -45,8 +44,8 @@ export function FrontPage({
           groupOf={fp.groupOf}
           title={fp.alsoTitle ?? (fp.grouped ? `Also this week, by ${groupWord(view)}` : "Also this week")}
           foldOneLiners={view.parts.oneLiners === "collapsed"}
+          threads={fp.threads}
           onOpen={onOpen}
-          inPlace={stacked}
         />
         <FigureOfTheWeek hook={fp.hook} onOpen={onOpen} />
       </div>
@@ -146,30 +145,37 @@ function Threads({ threads, order, title, onOpen }: { threads: Current[]; order:
   )
 }
 
-/** Stories outside the threads, a few rows, then the rest as one line. */
+/**
+ * Everything the takeaways and the thread cards do not lead to. A one-liner is the whole
+ * story in one sentence, so it opens in place like a dropdown with its date, area and
+ * sources. Longer stories open in the reading panel. "N more" opens in place too, and the
+ * list scrolls inside itself, so the page never grows.
+ */
 function AlsoThisWeek({
   items,
   groupOf,
   title,
   foldOneLiners,
+  threads,
   onOpen,
-  inPlace,
 }: {
   items: Item[]
   groupOf: Record<string, string>
   title: string
   foldOneLiners: boolean
+  threads: Current[]
   onOpen: Open
-  inPlace: boolean
 }) {
   const [all, setAll] = useState(false)
+  const [open, setOpen] = useState<string | null>(null)
   if (items.length === 0) return null
-  // Folded one-liners (a saved setting) never get rows of their own, only the count.
-  const rows = foldOneLiners ? items.filter((i) => i.tier !== "one_liner") : items
+  // Folded one-liners (a saved setting) stay behind the count until the reader asks for them.
+  const rows = foldOneLiners && !all ? items.filter((i) => i.tier !== "one_liner") : items
   // Collapsing a single row saves nothing, so show it instead.
   const shown = all || rows.length <= ALSO_ROWS + 1 ? rows : rows.slice(0, ALSO_ROWS)
   const rest = items.length - shown.length
-  const restLabel = foldOneLiners && rest === items.length - rows.length ? `${rest} one-liners this week` : `${rest} more this week`
+  const restLabel = foldOneLiners && !all && rest === items.length - rows.length ? `${rest} one-liners this week` : `${rest} more this week`
+  const threadLabels = new Set(threads.map((t) => t.label))
   return (
     <section className="fp__also" aria-labelledby="fp-also-t">
       <h2 className="eyebrow fp__label" id="fp-also-t">
@@ -177,31 +183,51 @@ function AlsoThisWeek({
       </h2>
       <ul className="also">
         {shown.map((i) => {
-          // Grouped views show the group (company, thread, area). Otherwise a short area name helps,
+          // Grouped views show the group (company, area). Otherwise a short area name helps,
           // long question-style areas add noise.
           const tag = groupOf[i.key] ?? (i.scope && i.scope !== "Other" && i.scope.length <= 24 ? i.scope : null)
+          const inline = i.tier === "one_liner"
+          const expanded = open === i.key
+          const detailId = `also-${i.index}`
           return (
-            <li key={i.key}>
-              <button type="button" className="also__row" onClick={() => onOpen({ kind: "story", key: i.key })} title={i.headline}>
+            <li key={i.key} className={expanded ? "is-open" : undefined}>
+              <button
+                type="button"
+                className="also__row"
+                aria-expanded={inline ? expanded : undefined}
+                aria-controls={inline ? detailId : undefined}
+                onClick={() => (inline ? setOpen(expanded ? null : i.key) : onOpen({ kind: "story", key: i.key }))}
+              >
                 <span className="also__text">{i.headline}</span>
                 {tag ? <span className={groupOf[i.key] ? "also__scope also__group" : "also__scope"}>{tag}</span> : null}
+                {inline ? <Chevron /> : <Arrow />}
               </button>
+              {inline && expanded ? (
+                <div className="also__detail" id={detailId}>
+                  <span className="also__meta">
+                    <StatusMark status={i.status} raw={i.statusRaw} />
+                    {i.date ? <span>{formatDay(i.date)}</span> : null}
+                    {i.scope && i.scope !== "Other" ? <span className="also__area">{i.scope}</span> : null}
+                  </span>
+                  {i.current && threadLabels.has(i.current) ? (
+                    <button type="button" className="linkbtn also__thread" onClick={() => onOpen({ kind: "thread", label: i.current as string })}>
+                      Part of “{i.current}”
+                    </button>
+                  ) : null}
+                  {i.sources.length > 0 ? <Sources links={i.sources} label={i.sources.length === 1 ? "Source" : "Sources"} /> : null}
+                </div>
+              ) : null}
             </li>
           )
         })}
         {rest > 0 ? (
           <li>
-            <button
-              type="button"
-              className="also__row also__more"
-              aria-expanded={inPlace ? false : undefined}
-              onClick={() => (inPlace && !foldOneLiners ? setAll(true) : onOpen({ kind: "more" }))}
-            >
+            <button type="button" className="also__row also__more" aria-expanded={false} onClick={() => setAll(true)}>
               <span className="also__text">{restLabel}</span>
-              <Arrow />
+              <Chevron />
             </button>
           </li>
-        ) : all && rows.length > ALSO_ROWS + 1 ? (
+        ) : all && items.length > ALSO_ROWS + 1 ? (
           <li>
             <button type="button" className="also__row also__more also__less" aria-expanded onClick={() => setAll(false)}>
               <span className="also__text">Show fewer</span>
@@ -210,6 +236,14 @@ function AlsoThisWeek({
         ) : null}
       </ul>
     </section>
+  )
+}
+
+function Chevron() {
+  return (
+    <svg className="also__chev" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
 

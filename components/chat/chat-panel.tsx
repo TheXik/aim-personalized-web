@@ -121,10 +121,7 @@ export function ChatPanel({
         <span className="chat__mark" aria-hidden="true">
           <AimMark size={16} spin={false} />
         </span>
-        <div>
-          <h2 className="chat__title">Change what you see</h2>
-          <p className="chat__sub">Say it in plain words. Next week&apos;s brief opens the same way.</p>
-        </div>
+        <h2 className="chat__title">Change what you see</h2>
         <button type="button" className="chat__close" aria-label="Close" onClick={onClose}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M3 3l8 8M11 3 3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -136,6 +133,7 @@ export function ChatPanel({
         {status}
       </p>
       <div className="chat__scroll" ref={scroller}>
+        <p className="chat__sub">Say it in plain words. Next week&apos;s brief opens the same way.</p>
         {viewControls}
         {turns.length === 0 ? (
           <div className="chat__intro">

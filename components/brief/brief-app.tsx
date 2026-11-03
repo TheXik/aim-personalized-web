@@ -290,7 +290,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         showChatButton={desk}
       />
       <main className="app__main" data-front-ready>
-        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} stacked={!desk} inert={Boolean(reading)} />
+        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} inert={Boolean(reading)} />
         {reading ? (
           <div className="rp-layer">
             <div className="rp-scrim" onClick={closeReading} aria-hidden="true" />

@@ -286,6 +286,7 @@
   .app[data-chat="open"] .app__main { margin-right: 400px; }
   .app[data-chat="open"] .fp { --fp-pad-x: 40px; }
   .app[data-chat="open"] .fp__row { gap: 32px; }
+  .app[data-chat="open"] .tb { padding-left: 40px; }
 }
 
 /* Screens shorter than 800px: one more step down before anything scrolls. */

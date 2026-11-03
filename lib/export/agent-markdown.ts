@@ -1,4 +1,6 @@
-import type { Citation, Figure, Item, Link } from "@/lib/brief/types"
+import type { Brief, Citation, Figure, Item, Link } from "@/lib/brief/types"
+import { buildView } from "@/lib/view/engine"
+import { DEFAULT_SPEC } from "@/lib/view/spec"
 import type { PageView, SectionView } from "@/lib/view/model"
 import { formatDay, formatRange } from "@/components/brief/format"
 
@@ -13,6 +15,14 @@ export type AgentMarkdownInput = {
   settings?: string[]
   // "Ask your own AI": the reader's own question, put on top of the brief.
   question?: string
+}
+
+// "Ask your own AI": the reader's question on top, then the WHOLE brief in the
+// default design, whatever the reader's saved settings hide, because the answer
+// may sit in a hidden item. The top-bar "Copy for your agent" keeps copying the
+// current view through toAgentMarkdown.
+export function askAiMarkdown(brief: Brief, question: string): string {
+  return toAgentMarkdown({ view: buildView(brief, DEFAULT_SPEC), settings: [], question })
 }
 
 const STATUS: Record<string, string> = { new: "New", updated: "Updated", carried: "Carried over" }

@@ -6,7 +6,7 @@ The site runs at https://aim.lukashellesch.com on Cloudflare Workers, behind one
 
 - **Cloudflare Workers with `@opennextjs/cloudflare`.** The app has server routes (`/api/briefs/[reader]`, `/api/chat`, `/api/login`), so a static Pages export cannot run it. Wrangler drives Workers, D1 and secrets because the project has a `wrangler.jsonc`.
 - **Domain.** `lukashellesch.com` is an active zone in Lukáš's Cloudflare account. The first deploy creates the `aim` record and its certificate from the `routes` entry. `workers.dev` and preview URLs are off, so the custom domain is the only way in.
-- **Password.** `proxy.ts` sends every route, including `/api`, to `/login` (pages) or answers 401 (API) unless the request carries a valid session cookie. `/api/login` checks the password in constant time and sets an HttpOnly, Secure, SameSite=Lax cookie for 7 days, signed with the password. Without the `SITE_PASSWORD` secret, production refuses every request. The password must be random and at least 16 characters (23 recommended): the cookie is signed with it and login has no rate limit, so production treats a shorter one as unset and answers 503.
+- **Password.** `proxy.ts` sends every route, including `/api`, to `/login` (pages) or answers 401 (API) unless the request carries a valid session cookie. `/api/login` checks the password in constant time and sets an HttpOnly, Secure, SameSite=Lax cookie for 7 days, signed with the password. Because of that, and because wrong passwords are only slowed by a 400 ms pause, the password must be random and at least 16 characters (23 recommended, for example four groups of five from a 31-letter alphabet, about 99 bits). Without the `SITE_PASSWORD` secret, or with one shorter than 16 characters, production answers 503 to every request.
 - **Spend.** `lib/ai/budget.ts` reserves each model call's worst case in D1 (`MODEL_SPEND_DB`) with one conditional `UPDATE`, capped at `MODEL_BUDGET_USD` per UTC day (10 cents, never above 20). Without the binding, or if D1 errors, there is no model call and the chat answers from its offline shortcuts.
 - **Briefs.** Aim's briefs are not in git. A build bundles whatever is in `data/briefs/` into the Worker, behind the password. On the Mac they are local files. In CI they are restored from GitHub secrets. The company tags are tracked (headline hashes and names only).
 - **No secrets in the build.** OpenNext compiles every `.env*` file into the Worker. `scripts/cf-build.sh` hides `.env*` during the build and puts them back afterwards, fails if the compiled env names a secret, and runs `scripts/check-public-assets.mjs`, which fails if brief text or ids land in the public static files. `pnpm cf:preview` and `pnpm cf:deploy` both go through it.
@@ -28,7 +28,7 @@ Run in `~/code/work/AIM-startup/task/aim-personalized-web`, on `main`, with the 
    ```
    Put the printed `database_id` into the `d1_databases` entry in `wrangler.jsonc`.
 4. **(Lukáš)** Deploy: `pnpm cf:deploy`. This creates the DNS record and the certificate. Until step 5 the site answers 503 everywhere, which is safe.
-5. **(Lukáš)** Secrets, from the local file or the prompt, never typed into a command line:
+5. **(Lukáš)** Secrets, from the local file or the prompt, never typed into a command line. `SITE_PASSWORD` must be random and at least 16 characters, or the site keeps answering 503. The one in `.env.local` is 23.
    ```sh
    grep '^SITE_PASSWORD=' .env.local | cut -d= -f2- | pnpm exec wrangler secret put SITE_PASSWORD
    pnpm exec wrangler secret put AZURE_OPENAI_API_KEY   # paste the key at the prompt
@@ -129,5 +129,5 @@ Until production CI is switched on, the site is deployed from the Mac as above, 
 
 ## Known limits, accepted for the demo
 
-- The session cookie is signed with the password. Anyone holding a cookie could try to guess the password offline. With a random 20-character password (about 99 bits) that is out of reach. A separate random `SESSION_SECRET` would remove the link if the password ever becomes something memorable.
+- The session cookie is signed with the password. Anyone holding a cookie could try to guess the password offline. With a random 23-character password (about 99 bits) that is out of reach, and production refuses to run with one shorter than 16 characters. A separate random `SESSION_SECRET` would remove the link if the password ever becomes something memorable.
 - Wrong passwords only cost a 400 ms pause. Optional: one Cloudflare WAF rate-limiting rule on `POST /api/login` per IP (dashboard, Security, WAF, Rate limiting rules).

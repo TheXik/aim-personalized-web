@@ -16,8 +16,9 @@
 
   // Secrets, never in this file: SITE_PASSWORD and AZURE_OPENAI_API_KEY (wrangler secret put).
   // CHAT_LIVE=1 lets the chat call the model. MODEL_BUDGET_USD is the spend cap per
-  // UTC day, kept in the MODEL_SPEND_DB database (lib/ai/budget.ts), never above 0.20.
-  "vars": { "CHAT_LIVE": "1", "MODEL_BUDGET_USD": "0.10" },
+  // UTC day, kept in the MODEL_SPEND_DB database (lib/ai/budget.ts). On Workers the
+  // code never allows more than 10 dollars. Dev, tests and evals stay at 20 cents max.
+  "vars": { "CHAT_LIVE": "1", "MODEL_BUDGET_USD": "10" },
   "d1_databases": [{ "binding": "MODEL_SPEND_DB", "database_name": "aim-model-spend", "database_id": "72b31569-fc47-4743-9e47-1a912f4f1f77" }],
 
 

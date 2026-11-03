@@ -166,7 +166,7 @@ How to read it:
 Smaller calls, each with the fact that drove it.
 
 - **Live model calls are opt-in** (`CHAT_LIVE=1` plus a key), so no dev server or test spends money by accident.
-- **Every call reserves its worst-case cost before it is sent**, against a daily cap of $0.10 (at most $0.20). A call that could cross the cap is never sent. The ledger is atomic, so concurrent calls cannot overshoot.
+- **Every call reserves its worst-case cost before it is sent**, against a daily cap: $10 on the live site (the most the code allows there), $0.10 by default and at most $0.20 in dev, tests and evals. A call that could cross the cap is never sent. The ledger is atomic, so concurrent calls cannot overshoot.
 - **`z.union`, not `z.discriminatedUnion`, in the output schema.** Azure rejects the `oneOf` that a discriminated union produces (`400 invalid_json_schema`, own probe).
 - **Reasoning effort goes under `providerOptions.openai`.** On `azure.chat()` the `azure` key is silently ignored: "minimal" still produced 2,752 and 3,136 reasoning tokens in two runs, against 0 with the `openai` key (own measurement).
 - **Reasoning effort low, not minimal.** Low matched the intended change in 54 of 54 calls and marked both hostile requests unsupported 12 of 12 times. Minimal got 53 of 54 and 11 of 12, for $0.0002 and 0.4 s less per call (own benchmark).

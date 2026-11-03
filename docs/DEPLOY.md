@@ -7,7 +7,7 @@ The site runs at https://aim.lukashellesch.com on Cloudflare Workers, behind one
 - **Cloudflare Workers with `@opennextjs/cloudflare`.** The app has server routes (`/api/briefs/[reader]`, `/api/chat`, `/api/login`), so a static Pages export cannot run it. Wrangler drives Workers, D1 and secrets because the project has a `wrangler.jsonc`.
 - **Domain.** `lukashellesch.com` is an active zone in Lukáš's Cloudflare account. The first deploy creates the `aim` record and its certificate from the `routes` entry. `workers.dev` and preview URLs are off, so the custom domain is the only way in.
 - **Password.** `proxy.ts` sends every route, including `/api`, to `/login` (pages) or answers 401 (API) unless the request carries a valid session cookie. `/api/login` checks the password in constant time and sets an HttpOnly, Secure, SameSite=Lax cookie for 7 days, signed with the password. Because of that, and because wrong passwords are only slowed by a 400 ms pause, the password must be random and at least 16 characters (23 recommended, for example four groups of five from a 31-letter alphabet, about 99 bits). Without the `SITE_PASSWORD` secret, or with one shorter than 16 characters, production answers 503 to every request.
-- **Spend.** `lib/ai/budget.ts` reserves each model call's worst case in D1 (`MODEL_SPEND_DB`) with one conditional `UPDATE`, capped at `MODEL_BUDGET_USD` per UTC day (10 cents, never above 20). Without the binding, or if D1 errors, there is no model call and the chat answers from its offline shortcuts.
+- **Spend.** `lib/ai/budget.ts` reserves each model call's worst case in D1 (`MODEL_SPEND_DB`) with one conditional `UPDATE`, capped at `MODEL_BUDGET_USD` per UTC day (10 dollars on the live site, which is also the code's ceiling on Workers. Dev, tests and evals default to 10 cents and never go above 20). Without the binding, or if D1 errors, there is no model call and the chat answers from its offline shortcuts.
 - **Briefs.** Aim's briefs are not in git. A build bundles whatever is in `data/briefs/` into the Worker, behind the password. On the Mac they are local files. In CI they are restored from GitHub secrets. The company tags are tracked (headline hashes and names only).
 - **No secrets in the build.** OpenNext compiles every `.env*` file into the Worker. `scripts/cf-build.sh` hides `.env*` during the build and puts them back afterwards, fails if the compiled env names a secret, and runs `scripts/check-public-assets.mjs`, which fails if brief text or ids land in the public static files. `pnpm cf:preview` and `pnpm cf:deploy` both go through it.
 
@@ -121,7 +121,7 @@ Until production CI is switched on, the site is deployed from the Mac as above, 
 | `check` | every push and PR | 0 | $0 | about 3 min |
 | Production | "Run workflow", after approval | 20 | about $0.012 with the prompt cache, $0.028 without, hard cap $0.10 | about 6 min |
 | Full eval | "Run workflow", after approval | 74 | about $0.045 cached, $0.104 uncached, cap $0.10 | about 5 min |
-| Live site | per reader message | 1 | about $0.0006 to $0.0014, at most $0.10 a day | |
+| Live site | per reader message | 1 | about $0.0006 to $0.0014, at most $10 a day | |
 
 - Model cost uses the measured $0.00061 per call with the prompt cache and about $0.0014 without (research 05). Confidence: MODERATE. An uncached full eval can hit the 10-cent cap a few calls before the end and stop.
 - Runner minutes are free on public repositories.

@@ -90,7 +90,7 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 ## Spend caps
 
 - **Live calls are opt-in.** The chat calls the model only when `CHAT_LIVE=1` and a key are both set. Tests never call it.
-- **Daily cap.** At most $0.10 per UTC day by default. `MODEL_BUDGET_USD` can change it, never above $0.20. Each call reserves its worst-case cost before it is sent (prompt bytes as an upper bound on input tokens, 2,000 output tokens, list price plus 20%), and a call that could cross the cap is never sent. After the call the reservation is settled to the real cost.
+- **Daily cap.** The live site may spend at most $10 per UTC day (`MODEL_BUDGET_USD` in `wrangler.jsonc`, and the code never allows more on Cloudflare). Dev, tests and evals default to $0.10 and never go above $0.20. Each call reserves its worst-case cost before it is sent (prompt bytes as an upper bound on input tokens, 2,000 output tokens, list price plus 20%), and a call that could cross the cap is never sent. After the call the reservation is settled to the real cost.
 - **Where spend is counted.** In `.model-spend.json` locally and in a Cloudflare D1 table on the live site. If there is no safe place to count, no call is made.
 - **Rate limits.** 8 chat requests per minute per client, 30 model calls per minute across all clients, requests capped at 500 characters, 15 second timeout, no automatic retries.
 - **Eval.** `pnpm eval` runs the 75 research requests offline for free. It needs the briefs in `data/briefs/` and says it skipped otherwise. The live run (`EVAL_APPROVED=1 pnpm eval -- --live`) prints its call count first and refuses to start without that flag.

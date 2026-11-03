@@ -1,0 +1,45 @@
+name: Full chat eval
+
+# Manual only. Runs all 74 chat requests against gpt-5-mini-hiring on the real
+# briefs, restored from secrets. The spend cap in lib/ai/budget.ts stops the run
+# before any call could take it past 10 cents. Behind the "production"
+# environment, so every run waits for Lukáš's approval. Results stay in the log,
+# which prints request ids and verdicts only.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    if: vars.ENABLE_PRODUCTION == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Restore the briefs from secrets
+        env:
+          BRIEF_SPACE_LAUNCH: ${{ secrets.BRIEF_SPACE_LAUNCH }}
+          BRIEF_ENTERPRISE_AI: ${{ secrets.BRIEF_ENTERPRISE_AI }}
+          BRIEF_CZ_SK_AI: ${{ secrets.BRIEF_CZ_SK_AI }}
+        run: bash scripts/restore-briefs.sh
+      - name: Full eval, 74 calls, spend capped at 10 cents
+        env:
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          EVAL_APPROVED: "1"
+          MODEL_BUDGET_USD: "0.10"
+        run: pnpm eval -- --live

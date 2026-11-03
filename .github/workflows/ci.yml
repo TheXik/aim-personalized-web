@@ -1,0 +1,107 @@
+name: CI
+
+# Every push and pull request: install, typecheck, lint, tests on the synthetic
+# briefs. That job gets no secrets and never calls the model.
+#
+# Production runs only when started by hand (Actions, "Run workflow" on main), so
+# the click is the explicit yes. A push never deploys. It also sits behind the
+# GitHub "production" environment. It restores Aim's briefs from secrets (they are never
+# in git), runs the real-data tests, runs a 20-request model smoke check capped at
+# 10 cents, builds with OpenNext (the briefs are bundled into the Worker), checks
+# that no brief text sits in the public assets, deploys, then smoke-tests the live site.
+#
+# The production job is off until the repository variable ENABLE_PRODUCTION is
+# "true". Until then the site is deployed from the Mac (docs/DEPLOY.md), and no
+# key, token or brief has to sit in GitHub.
+#
+# No pull_request_target anywhere, so pull requests from forks never see a secret.
+# Logs are public once the repo is: nothing here prints brief text or a secret.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm exec next typegen && pnpm exec tsc --noEmit
+      - run: pnpm lint
+      - name: Tests on the synthetic briefs (real-brief tests skip)
+        run: pnpm test
+
+  production:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && vars.ENABLE_PRODUCTION == 'true'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://aim.lukashellesch.com
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: Restore the briefs from secrets
+        env:
+          BRIEF_SPACE_LAUNCH: ${{ secrets.BRIEF_SPACE_LAUNCH }}
+          BRIEF_ENTERPRISE_AI: ${{ secrets.BRIEF_ENTERPRISE_AI }}
+          BRIEF_CZ_SK_AI: ${{ secrets.BRIEF_CZ_SK_AI }}
+        run: bash scripts/restore-briefs.sh
+
+      # A failing test diff can quote a brief, and these logs are public, so the
+      # output stays on the runner. Rerun locally to see it.
+      - name: Real-data tests (they also parse every brief with the schema)
+        run: pnpm test > "$RUNNER_TEMP/test.log" 2>&1 || { echo "::error::Real-data tests failed. Output withheld because it can quote a brief. Rerun pnpm test locally."; exit 1; }
+
+      - name: Model smoke check, 20 calls, spend capped at 10 cents
+        env:
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          EVAL_APPROVED: "1"
+          MODEL_BUDGET_USD: "0.10"
+        run: pnpm eval -- --live --set=smoke --gate
+
+      - name: Build for Cloudflare Workers
+        run: pnpm exec opennextjs-cloudflare build
+
+      - name: No brief text in the public assets
+        run: node scripts/check-public-assets.mjs
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec opennextjs-cloudflare deploy
+
+      - name: Smoke test the live site
+        env:
+          SITE_URL: https://aim.lukashellesch.com
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: bash scripts/smoke-prod.sh

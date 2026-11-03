@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aim-personalized-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "aim-personalized-web" }],
+
+  // The only way in is the custom domain, behind the shared password (proxy.ts).
+  // workers.dev and preview URLs are off so there is no second door.
+  // On deploy, wrangler creates the DNS record and certificate for this hostname.
+  "routes": [{ "pattern": "aim.lukashellesch.com", "custom_domain": true }],
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // Secrets, never in this file: SITE_PASSWORD and AZURE_OPENAI_API_KEY (wrangler secret put).
+  // CHAT_LIVE=1 lets the chat call the model. MODEL_BUDGET_USD is the spend cap per
+  // UTC day, kept in the MODEL_SPEND_DB database (lib/ai/budget.ts), never above 0.20.
+  "vars": { "CHAT_LIVE": "1", "MODEL_BUDGET_USD": "0.10" },
+  "d1_databases": [{ "binding": "MODEL_SPEND_DB", "database_name": "aim-model-spend", "database_id": "REPLACE_WITH_D1_DATABASE_ID" }],
+
+
+  "observability": { "enabled": true }
+}

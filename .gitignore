@@ -49,3 +49,8 @@ design/aim-reference/
 
 # Aim sample briefs are not part of the repository. Copy them here to run the app.
 data/briefs/brief-*.json
+
+# Cloudflare build output
+.open-next
+.wrangler
+.dev.vars

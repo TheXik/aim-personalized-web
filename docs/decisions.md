@@ -200,6 +200,26 @@ How to read it:
 
 ---
 
+## 12. A rewritten prompt was tested and not adopted
+
+**Decision.** The chat keeps its current prompt (`prompts/view-editor.md`). A rewrite by a prompt-engineering pass was run against it on the same code and lost.
+
+**Why.** The gate agreed in advance: adopt the rewrite only if it matches or beats the current prompt on all three eval groups. It was much better at declining with the right reason and worse at applying changes, so it failed the gate.
+
+**Evidence.** Live A/B on the 74-request suite, same code, gpt-5-mini at low effort, one run each (Own test, **MODERATE**: one sample per case):
+
+| Group | Current prompt | Rewrite |
+|---|---|---|
+| Apply (37) | 27 pass | 24 pass |
+| Not supported (22) | 13 pass | 19 pass |
+| Refuse | 14 of 15 pass | 4 of 4 pass (the daily spend cap stopped the run after 63 of 74) |
+
+The rewrite lost four apply cases (a scope pinned to the bottom, a topic filter, two follow-ups) and gained seven decline reasons. Cost of both runs: about 9 cents.
+
+**What would change it.** A combined prompt that keeps the current apply behaviour and takes the rewrite's rules for reasons, then passes the same gate.
+
+---
+
 ## Technical choices made during the build
 
 Smaller calls, each with the fact that drove it.

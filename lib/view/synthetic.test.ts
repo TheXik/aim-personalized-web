@@ -170,3 +170,54 @@ describe("synthetic briefs: copy for agent", () => {
     expect(out).toContain("Third delay") // chart label
   })
 })
+
+describe("no model-written text reaches the reader (decision 5)", () => {
+  const M = "ZZMODELTEXT"
+  const outputs: Op[][] = [
+    [{ op: "filter", mode: "keep", where: { op: "contains", field: "text", values: [M] }, duration: "standing" }],
+    [{ op: "filter", mode: "keep", where: { op: "eq", field: "scope", value: M }, duration: "standing" }],
+    [{ op: "pin", where: { op: "has_number" }, to: "top", label: { source: "scope", text: M }, duration: "standing" }],
+    [{ op: "pin", where: { op: "has_number" }, to: "top", label: { source: "reader", text: M }, duration: "standing" }],
+    [{ op: "rename", section: "brief", text: M }],
+    [{ op: "not_supported", reason: "other", nearest: { op: "rename", section: "brief", text: M } }],
+    [{ op: "not_supported", reason: "other", nearest: { op: "filter", mode: "keep", where: { op: "contains", field: "text", values: [M] }, duration: "standing" } }],
+    [{ op: "not_supported", reason: "other", nearest: { op: "pin", where: { op: "eq", field: "company", value: M }, to: "top", label: null, duration: "standing" } }],
+  ]
+  it.each(outputs.map((ops, i) => [i, ops] as const))("case %i", async (_, ops) => {
+    const r = await handleChat({ request: "numbers first", spec: DEFAULT_SPEC }, { brief: orbital, callModel: async () => ({ ok: true, output: { ops } }) })
+    expect(`${r.reply} ${r.offer?.label ?? ""} ${JSON.stringify(r.spec)}`).not.toContain(M)
+  })
+
+  it("still offers a nearest op that passes the checks", async () => {
+    const nearest: Op = { op: "filter", mode: "hide", where: { op: "eq", field: "tier", value: "one_liner" }, duration: "standing" }
+    const r = await handleChat(
+      { request: "summarise it", spec: DEFAULT_SPEC },
+      { brief: orbital, callModel: async () => ({ ok: true, output: { ops: [{ op: "not_supported", reason: "new_text", nearest }] } }) },
+    )
+    expect(r.offer?.label).toBe("Hiding one-liners")
+  })
+})
+
+describe("the browser-sent spec is cleaned before use", () => {
+  it("drops forged labels, claim renames and oversized rules", async () => {
+    let deep: Rule = { op: "has_number" }
+    for (let i = 0; i < 40; i++) deep = { op: "not", arg: deep }
+    const forged = {
+      ...DEFAULT_SPEC,
+      filters: [{ id: "f1", mode: "keep", where: deep, expires: null }],
+      pins: [{ id: "p1", where: { op: "has_number" }, to: "top", label: { source: "scope", text: "Vela Freight went bankrupt" }, expires: null }],
+      renames: [{ section: "brief", text: "Korsa folds in 2031" }, { section: "detail", text: "Big ‮slle" }],
+    }
+    const r = await handleChat({ request: "  ", spec: forged }, { brief: orbital, callModel: async () => ({ ok: true, output: { ops: [] } }) })
+    expect(r.spec.filters).toEqual([])
+    expect(r.spec.pins[0].label).toBeNull()
+    expect(r.spec.renames).toEqual([])
+  })
+
+  it("refuses claims written with other digits or currency signs", async () => {
+    const { looksLikeClaim } = await import("./apply")
+    expect(looksLikeClaim("Exit by ２０３１")).toBe(true)
+    expect(looksLikeClaim("Worth ¥ billions")).toBe(true)
+    expect(looksLikeClaim("Quick reads")).toBe(false)
+  })
+})

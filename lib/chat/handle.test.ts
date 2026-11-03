@@ -89,7 +89,8 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
         { op: "filter", mode: "keep", where: { op: "contains", field: "text", values: ["Artemis"] }, duration: "standing" },
       ])
       expect(r.changed).toBe(false)
-      expect(r.reply).toMatch(/“Artemis” isn't in this week's brief/)
+      expect(r.reply).toMatch(/One of those words isn't in this week's brief/)
+      expect(r.reply).not.toContain("Artemis")
     })
 
     it("accepts the reader's own short form", async () => {

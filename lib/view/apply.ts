@@ -1,8 +1,8 @@
 import type { Brief } from "../brief/types"
 import { containsPhrase, fold } from "../brief/text"
-import { allowedValues, validateRule, type RuleProblem } from "./rules"
+import { allowedValues, ruleSize, validateRule, type RuleProblem } from "./rules"
 import type { ApplicableOp, NotSupportedReason, Op } from "./ops"
-import { DEFAULT_SPEC, SPEC_LIMITS, ViewSpec, type Filter, type Label, type Pin } from "./spec"
+import { DEFAULT_SPEC, RULE_LIMITS, SPEC_LIMITS, ViewSpec, type Filter, type Label, type Pin, type Rule } from "./spec"
 
 // Applies the model's ops to the reader's spec. Pure. Every literal is checked
 // against this week's brief or the reader's own message before it is saved.
@@ -40,7 +40,16 @@ const nextId = (prefix: string, taken: string[]) => {
 // Reader words used as a label or section name must not read as a claim: no
 // digits, no currency and at most 6 words. "My competitors" passes,
 // "SpaceX will fail by 2027" does not.
-export const looksLikeClaim = (text: string) => /[\d$€£%]/.test(text) || text.trim().split(/\s+/).length > 6
+// Any digit or currency sign in any script ("２０２７", "¥", "Kč" after NFKC is
+// letters, so currency words are caught by the word cap only), "%", or more than 6 words.
+export const looksLikeClaim = (text: string) => {
+  const t = text.normalize("NFKC")
+  return /[\p{Nd}\p{Sc}%]/u.test(t) || t.trim().split(/\s+/).length > 6
+}
+
+// Invisible formatting characters (bidi overrides, zero-width) can make a label
+// display differently from what was checked. Strip them from reader text.
+export const stripInvisible = (text: string) => text.replace(/\p{Cf}/gu, "")
 
 const sameRule = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
@@ -49,8 +58,9 @@ const sameRule = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringif
 function checkLabel(label: Label | null, ctx: ApplyContext): { label: Label | null; problem: RejectReason | null } {
   if (!label) return { label: null, problem: null }
   if (label.source === "reader") {
-    return label.text.length <= 40 && !looksLikeClaim(label.text) && containsPhrase(ctx.request, label.text)
-      ? { label, problem: null }
+    const text = stripInvisible(label.text)
+    return text.length <= 40 && !looksLikeClaim(text) && containsPhrase(ctx.request, text)
+      ? { label: { source: "reader", text }, problem: null }
       : { label: null, problem: { kind: "not_reader_words", text: label.text } }
   }
   const exact = allowedValues(ctx.brief, label.source).find((v) => fold(v) === fold(label.text))
@@ -128,11 +138,12 @@ function applyOne(spec: ViewSpec, op: ApplicableOp, ctx: ApplyContext, changes: 
     }
 
     case "rename": {
-      if (looksLikeClaim(op.text) || !containsPhrase(ctx.request, op.text)) return { spec, reasons: [{ kind: "not_reader_words", text: op.text }] }
+      const text = stripInvisible(op.text)
+      if (!text.trim() || looksLikeClaim(text) || !containsPhrase(ctx.request, text)) return { spec, reasons: [{ kind: "not_reader_words", text: op.text }] }
       const others = spec.renames.filter((r) => r.section !== op.section)
       if (others.length >= SPEC_LIMITS.renames) return { spec, reasons: [{ kind: "limit", what: "renames" }] }
-      changes.push({ kind: "renamed", section: op.section, text: op.text })
-      return { spec: { ...spec, renames: [...others, { section: op.section, text: op.text }] }, reasons: [] }
+      changes.push({ kind: "renamed", section: op.section, text })
+      return { spec: { ...spec, renames: [...others, { section: op.section, text }] }, reasons: [] }
     }
   }
 }
@@ -164,4 +175,27 @@ export function applyOps(start: ViewSpec, ops: Op[], ctx: ApplyContext): ApplyRe
     return { spec: start, changes: [], rejected: [...rejected, ...ops.filter((o): o is ApplicableOp => o.op !== "not_supported").map((op) => ({ op, reasons: [{ kind: "limit" as const, what: "size" as const }] }))], notSupported }
   }
   return { spec: parsed.data, changes, rejected, notSupported }
+}
+
+// The spec the browser sends is the reader's own localStorage, so only the
+// reader can forge it. Still, give it the same limits as a fresh edit before
+// the server uses it: rule size, allowlisted labels, claim-free reader text and
+// the byte cap. Anything that fails is dropped, never repaired.
+export function sanitizeSpec(spec: ViewSpec, brief: Brief): ViewSpec {
+  const small = (r: Rule) => {
+    const s = ruleSize(r)
+    return s.depth <= RULE_LIMITS.maxDepth && s.nodes <= RULE_LIMITS.maxNodes
+  }
+  const okLabel = (l: Label | null) =>
+    !l ||
+    (l.source === "reader"
+      ? l.text === stripInvisible(l.text) && l.text.length <= 40 && !looksLikeClaim(l.text)
+      : allowedValues(brief, l.source).some((v) => fold(v) === fold(l.text)))
+  const out: ViewSpec = {
+    ...spec,
+    filters: spec.filters.filter((f) => small(f.where)),
+    pins: spec.pins.filter((p) => small(p.where)).map((p) => (okLabel(p.label) ? p : { ...p, label: null })),
+    renames: spec.renames.filter((r) => r.text === stripInvisible(r.text) && r.text.length <= 40 && !looksLikeClaim(r.text)),
+  }
+  return JSON.stringify(out).length <= SPEC_LIMITS.bytes ? out : DEFAULT_SPEC
 }

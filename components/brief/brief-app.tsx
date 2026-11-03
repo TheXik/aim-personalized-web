@@ -161,7 +161,7 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
   const takeOffer = (turnId: string, offer: Offer) => {
     if (!brief) return
     const result = applyOps(spec, offer.ops, { brief, request: offerRequest.current })
-    const r = composeReply(brief, spec, result)
+    const r = composeReply(brief, spec, result, offerRequest.current)
     if (r.changed) saveSpec(result.spec)
     setTurns((t) => [
       ...t.map((x) => (x.id === turnId && x.role === "assistant" && x.state !== "pending" ? { ...x, offer: null } : x)),

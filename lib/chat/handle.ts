@@ -1,5 +1,5 @@
 import type { Brief } from "../brief/types"
-import { applyOps } from "../view/apply"
+import { applyOps, sanitizeSpec } from "../view/apply"
 import { buildCatalog, specForModel } from "../view/catalog"
 import type { Edit, Op } from "../view/ops"
 import { composeReply, type Offer } from "../view/reply"
@@ -38,7 +38,7 @@ const FAILURE_COPY: Record<Exclude<ModelResult, { ok: true }>["reason"], string>
 }
 
 export async function handleChat(input: { request: unknown; spec: unknown }, deps: ChatDeps): Promise<ChatResponse> {
-  const spec = parseStoredSpec(input.spec)
+  const spec = sanitizeSpec(parseStoredSpec(input.spec), deps.brief)
   const request = typeof input.request === "string" ? input.request.trim().slice(0, MAX_REQUEST_CHARS) : ""
   const log = deps.log ?? (() => {})
   if (!request) return { spec, reply: "Tell me how you'd like the page, for example “numbers first”.", changed: false, offer: null, source: "none" }
@@ -63,7 +63,7 @@ export async function handleChat(input: { request: unknown; spec: unknown }, dep
   }
 
   const applied = applyOps(spec, ops, { brief: deps.brief, request })
-  const reply = composeReply(deps.brief, spec, applied)
+  const reply = composeReply(deps.brief, spec, applied, request)
 
   if (applied.notSupported || applied.rejected.length) {
     // Unmet requests grow the grammar. The request is the reader's own text.

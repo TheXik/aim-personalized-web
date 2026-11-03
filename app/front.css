@@ -433,13 +433,22 @@
 /* One spelling of the status label everywhere: "New", "Updated", never upper-cased by a mono label row. */
 .rp__meta .status, .also__meta .status { text-transform: none; letter-spacing: 0; }
 
-/* With the chat open on narrower laptops the top bar stays on one line: compact controls. */
-@media (min-width: 1024px) and (max-width: 1359px) {
-  .app[data-chat="open"] .tb__market, .app[data-chat="open"] .tb__viewmeta, .app[data-chat="open"] .tb__label { display: none; }
-  .app[data-chat="open"] .top__btnlong { display: none; }
-  .app[data-chat="open"] .top__btnshort { display: inline; }
-  .app[data-chat="open"] .tb__chat { padding: 0 12px; }
+/* The top bar never wraps. It measures its own width and drops detail in order:
+   the view count, then "Your market · N min", then the long button labels. */
+.tb { container-type: inline-size; container-name: topbar; }
+.tb > *, .tb button, .tb a { white-space: nowrap; flex-shrink: 0; }
+.tb__date { min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; }
+@container topbar (max-width: 1100px) { .tb__viewmeta { display: none; } }
+@container topbar (max-width: 960px) { .tb__market { display: none; } }
+@container topbar (max-width: 820px) {
+  .top__btnlong { display: none; }
+  .top__btnshort { display: inline; }
 }
+@container topbar (max-width: 700px) {
+  .tb__label { display: none; }
+  .tb__chat { padding: 0 12px; }
+}
+
 /* Narrow thread cards (chat open): the age goes before the status gets cut. */
 .card { container-type: inline-size; }
 @container (max-width: 240px) { .card__age { display: none; } }
@@ -451,3 +460,5 @@
   .chat--sheet[data-sheet="peek"] { height: 34dvh; }
   .app[data-sheet="peek"] .fp { padding-bottom: calc(34dvh + 24px); }
 }
+/* Chat footer: "Tell Lukáš · Unmet requests are logged without IP." reads as one line. */
+.chat__foot { display: block; text-align: left; color: var(--b-faint); }

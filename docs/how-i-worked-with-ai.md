@@ -292,7 +292,7 @@ Every prompt I typed while building this, exported from the session transcripts:
 > 1. Primary Request and Intent:
 >    This session is **aim-startup-09**. The requests came as cross-session messages from aim-startup-8d (the coordinator) and aim-startup-43 (the build lead). Both work for Lukáš on a one-day take-home for Aim (startaiming.com): a Next.js page showing a reader's weekly brief, plus a chat that reshapes the page through a saved view spec.
 >
->    - **Task 1, research 05 (done):** benchmark A (the model writes the whole page as JSON) against B (the model writes a compact view spec) on Azure `gpt-5-mini-hiring`. Use 9 requests × 3 briefs × 2 reps. Measure tokens, p50/p95 latency, schema pass rate, A's share of non-verbatim sentences, and B at minimal vs low effort. Experiment C tags each of the 36 items with companies, by gpt-5-mini and by compromise, against a hand-made gold list. Run gpt-5-hiring once as a comparison. Price at Azure list rates. Report at `task/research/05-benchmark.md`, summary to aim-startup-8d. Work only in `task/bench/`.
+>    - **Task 1, research 05 (done):** benchmark A (the model writes the whole page as JSON) against B (the model writes a compact view spec) on Azure `gpt-5-mini-hiring`. Use 9 requests × 3 briefs × 2 reps. Measure tokens, p50/p95 latency, schema pass rate, A's share of non-verbatim sentences, and B at minimal vs low effort. Experiment C tags each of the 36 items with companies, by gpt-5-mini and by compromise, against a hand-made gold list. Run gpt-5-hiring once as a [brief label]. Price at Azure list rates. Report at `task/research/05-benchmark.md`, summary to aim-startup-8d. Work only in `task/bench/`.
 >    - **Task 2, BUILD.md lane "Data and model wiring" (done):** write `data/briefs/<slug>.tags.json` from experiment C outputs with no new model calls. Key entries by item index and include the headline. Write an Azure provider module with the reasoning-effort fix and per-call token logging. Agree the format with lead aim-startup-43 first. Report to aim-startup-8d in at most 5 lines.
 >
 > 2. Key Technical Concepts:
@@ -601,7 +601,7 @@ Every prompt I typed while building this, exported from the session transcripts:
 >      - Spec saved per reader in localStorage and applied next week without the model.
 >      - 100dvh shell, currents as the index, mono kicker (status, age, source count).
 >      - Chat as a nonmodal bottom sheet on phone and tablet portrait. Laptop: 640px reading column plus a 340 to 400px chat pane.
->    - Brief JSON shape: recap.doc with subject, verdict, currents[] and items[] (tiers detail, brief, one_liner), plus citations and scopes. Figure types: timeline, chart, table, comparison.
+>    - Brief JSON shape: recap.doc with subject, verdict, currents[] and items[] (tiers detail, brief, one_liner), plus citations and scopes. Figure types: timeline, chart, table, [brief label].
 >    - Subagent context leak: a subagent spawned while the session's working folder is under task/ picks up task/CLAUDE.md, which points to the brief docs.
 >
 > 3. Files and Code Sections:
@@ -701,7 +701,7 @@ Every prompt I typed while building this, exported from the session transcripts:
 >      - figure head used as the figure title
 >      - horizontal bars with labels above on phone
 >      - vertical timeline
->      - comparison stacked on phone
+>      - [brief label] stacked on phone
 >      - the checkmark table stays a real table
 >      - source chips
 >      - active rules as removable chips with "hidden (N)"
@@ -938,7 +938,7 @@ Every prompt I typed while building this, exported from the session transcripts:
 >        cd ~/code/work/AIM-startup/task/aim-personalized-web && git status --short
 >        rm -rf /tmp/aim-public && mkdir /tmp/aim-public
 >        git archive main | tar -x -C /tmp/aim-public
->        A=(--allow "Sirius Space Services")   # public name kept by D5
+>        A=(--allow "[brief label]")   # public name kept by D5
 >        python3 -I ../research/08-security-scan.py /tmp/aim-public --briefs data/briefs --env .env.local --env ../aim-personalized-web-tests/.dev.vars "${A[@]}"
 >        gitleaks dir --redact /tmp/aim-public
 >        cd /tmp/aim-public && git init -b main
@@ -994,7 +994,7 @@ Every prompt I typed while building this, exported from the session transcripts:
 >    - The zsh alias conflict with the function name `c()` caused a parse error. Renamed it to `probe()`.
 >    - tsx refused top-level await in a .ts file (cjs output). Renamed the script to .mts.
 >    - The zsh `====` in echo errored. Used `----` instead.
->    - The scanner labelled every `name` field as "scope_name", which was misleading. The hits in agent-markdown.test.ts were figure row labels from the CZ/SK brief, not scope names. Renamed the kind to "name_field", corrected the report, and dropped the wrong `--allow "launch failures"`.
+> [quoted brief text, omitted]
 >    - The killed background dev server reported exit 143. That was expected.
 >    - There was no user feedback correcting me in this conversation.
 >
@@ -1119,9 +1119,9 @@ Every prompt I typed while building this, exported from the session transcripts:
 >    - `/Users/lukashellesch/code/work/AIM-startup/task/research/01-personas.md` (created): four readers, role/decision, moment, first three things, figures, picks from own brief with quoted headlines, presets; cross-reader evidence (NN/g 51 s, F-pattern, Crayon 2025, Klue, LinkedIn/Edelman 55% first minute, Litmus); build implications incl. strict has_number (naive digit check flagged "Pad 40", "LC-39A", "Crew-13", 9 of 13 space headlines).
 >    - `/Users/lukashellesch/code/work/AIM-startup/task/research/demo-script.md` (created, iterated): 8 beats; run sheet 0:00–0:35 beat 1, 0:35–2:55 beat 2, 2:55–3:50 beat 3, 3:50–6:15 beat 4, 6:15–7:35 beat 5, 7:35–8:15 beat 6, 8:15–9:10 beat 7, 9:10–9:30 beat 8, buffer to 10:00; ~1,180 spoken words. Beat 2 v0 lines: honest detail (run 1 read notes, rerun isolated), credit (new/updated badges with age, 630-day bar), three changes (one long page 6/10 screens with stats row, invented "High, Medium and Low severity", one brief only in file order); "Say 'Mine renders all three' only once QA has confirmed". Beat 3 speaks two shapes (generate page weekly: 21 s vs 3.4 s, 1/8 cost, ≤~1 in 20; free-text label wrote "OpenAI raised 40 billion"), whole-view moved to slide. Beat 4: suggestion chips, type "Put Isar, RFA and Sirius at the top. They are who I compete with.", network tab op, `prompts/view-editor.md` (76 lines), reload, `npx vitest run tests/carryover.synthetic.test.ts` (7 pass), Reset; fallback = "Launch sales desk" preset (pins items 7, 8, 12, moves Crew-13 down). Evidence line updated: next week built in memory from real space brief by position (new recap id, Crew-13 removed, RFA one-liner promoted, thread renamed, synthetic new item); needs real briefs in data/briefs (present on Lukáš's machine, 7 of 7 pass). Beat 5 live breaks: "Only what is new this week" on cz-sk-ai (hides 6 of 11, offers new or updated), "Translate it into Czech" (refused). Beat 6 candidates A–D (reasoning effort azure key ignored: 2,752/3,136 tokens; SpaceX tag inferred from Starship; has_number digits; 62% coverage ceiling) — Lukáš picks two he checked. Beat 7 five next steps. Q&A table, setup checklist (6 Azure calls, ~24k in/1.2k out, <$0.01, needs Lukáš's yes). Open slots: live chip text from rehearsal, beat 6 picks, VIDEO.md/PLAN 16:15 outdated.
 >    - `/Users/lukashellesch/code/work/AIM-startup/task/research/presets.json` (created): four presets, all parse on current main and pass presets-check:
->      - launch-sales-desk (for space-launch): pins p1 `{op:"in",field:"company",values:["Isar Aerospace","Rocket Factory Augsburg","Sirius Space Services"]}` to top label null; p2 `{op:"eq",field:"current",value:"SpaceX and NASA prepare Crew-13 mission"}` to bottom label {source:"current", text same}; matches p1 [7,8,12], p2 [4].
+>      - launch-sales-desk (for space-launch): pins p1 `{op:"in",field:"company",values:["Isar Aerospace","Rocket Factory Augsburg","[brief label]"]}` to top label null; p2 `{op:"eq",field:"current",value:"[brief label]"}` to bottom label {source:"current", text same}; matches p1 [7,8,12], p2 [4].
 >      - raising-this-quarter (enterprise-ai): parts.paragraphs "first", group "scope".
->      - peer-playbook (cz-sk-ai): group "scope", layout.figures "prominent", pin p1 eq current "Slowdown talk reaches Czech boardrooms" to bottom with current label; matches [3,5].
+>      - peer-playbook (cz-sk-ai): group "scope", layout.figures "prominent", pin p1 eq current "[brief label]" to bottom with current label; matches [3,5].
 >      - numbers-first (all three): filter f1 hide `{op:"and",args:[{op:"eq",field:"tier",value:"one_liner"},{op:"not",arg:{op:"has_number"}}]}`, order numbers_first, layout.figures prominent; matches space [6,8,9,12], enterprise [7], cz-sk [4,5].
 >    - `/Users/lukashellesch/code/work/AIM-startup/task/research/presets-check.ts` (created): run from repo `npx tsx ../research/presets-check.ts`; uses ViewSpec, DEFAULT_SPEC, RULE_LIMITS, SPEC_LIMITS, allowedValues, matches, ruleSize, validateRule, buildView, normalizeBrief, fold; checks parse, limits, label allowlist, matches, prints sections/chips, fails on emptyFallback or inactive directive. Needs real briefs present.
 >    - `/Users/lukashellesch/code/work/AIM-startup/task/aim-personalized-web/README.md` (written by me, committed by lead in b7a0de2, 2f47edb and later): intro 3 lines; "About the data" note (copy three JSONs into data/briefs/ names unchanged, without them message + synthetic tests, restart if added while running, live site has data); 1 Live; 2 agent prompt ("Paste this into any coding agent that can run shell commands:" — lead made tool-neutral) with 10 steps, port 3737, step 4 copy briefs ("Ask me where they are. Do not search my disk"), step 5 .env.local two lines, step 6 "No test should fail. Without the briefs, the tests that need them are skipped.", step 8 curl `/api/briefs/<reader>` expect 200 (404 = briefs missing), step 9 chat curl "hide the one-liners"; 3 Manual commands (clone, pnpm install, cp briefs, cp .env.example .env.local, pnpm test, pnpm dev), "set CHAT_LIVE=1", MODEL_BUDGET_USD pointer; works without key list; three readers table; how chat works (6 points); prompt location; spend caps; project map; "What I would do next" now 6 items: 1 MCP tool, 2 **Questions about the brief, answered only from the brief** (new, uncommitted), 3 Company ids in Aim's API, 4 Settings saved per user on server, 5 Live model check in CI, 6 More design rounds. New item text: "Today the chat only changes the view, on purpose, because that is what the assignment asks for. Next, readers could ask questions such as "who led the biggest round this week?" and get answers built only from this week's brief, each sentence linked to the item or update it comes from, with a code check that every name and number in the answer appears in the brief. It would also give a home to the requests the chat declines today because they need new text: 6 of the 60 realistic test requests."

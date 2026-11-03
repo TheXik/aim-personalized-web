@@ -376,21 +376,23 @@
 
 /* ---------- Scrollbars: thin, warm, and only there while you use them ---------- */
 
-.rp__scroll, .chat__scroll, .fp__also .also, .fp {
+.rp__scroll, .chat__scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
   transition: scrollbar-color 300ms var(--ease-standard);
 }
-.rp__scroll:hover, .chat__scroll:hover, .fp__also .also:hover, .fp:hover,
-.rp__scroll:focus-within, .chat__scroll:focus-within {
+.rp__scroll:hover, .chat__scroll:hover, .rp__scroll:focus-within, .chat__scroll:focus-within {
   scrollbar-color: #d6d2cf transparent;
 }
+/* The front page is one screen: no scrollbars on it at all. An opened dropdown that makes the
+   list longer than its space scrolls inside the list, with a soft fade that says there is more. */
+.fp, .fp__also .also { scrollbar-width: none; }
+.fp::-webkit-scrollbar, .fp__also .also::-webkit-scrollbar { display: none; }
+.also[data-more] { mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
 /* Engines without scrollbar-color (older Safari): the same thin, rounded thumb. */
 @supports not (scrollbar-color: auto) {
-  .rp__scroll::-webkit-scrollbar, .chat__scroll::-webkit-scrollbar, .also::-webkit-scrollbar, .fp::-webkit-scrollbar { width: 10px; }
-  .rp__scroll::-webkit-scrollbar-thumb, .chat__scroll::-webkit-scrollbar-thumb, .also::-webkit-scrollbar-thumb, .fp::-webkit-scrollbar-thumb {
-    background: #d6d2cf; border-radius: 999px; border: 3px solid var(--background);
-  }
-  .rp__scroll::-webkit-scrollbar-track, .chat__scroll::-webkit-scrollbar-track, .also::-webkit-scrollbar-track, .fp::-webkit-scrollbar-track { background: transparent; }
+  .rp__scroll::-webkit-scrollbar, .chat__scroll::-webkit-scrollbar { width: 10px; }
+  .rp__scroll::-webkit-scrollbar-thumb, .chat__scroll::-webkit-scrollbar-thumb { background: #d6d2cf; border-radius: 999px; border: 3px solid var(--background); }
+  .rp__scroll::-webkit-scrollbar-track, .chat__scroll::-webkit-scrollbar-track { background: transparent; }
 }
-@media (prefers-reduced-motion: reduce) { .rp__scroll, .chat__scroll, .fp__also .also, .fp { transition: none; } .rp__bar::after { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rp__scroll, .chat__scroll { transition: none; } .rp__bar::after { transition: none; } }

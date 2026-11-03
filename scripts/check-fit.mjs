@@ -41,7 +41,8 @@ const VIEWS = {
 
 const CASES = []
 for (const reader of READERS) {
-  for (const [w, h] of [[1280, 800], [1440, 900]]) CASES.push({ reader, w, h, chat: false, view: "default" })
+  // 1470x800: a 13-inch MacBook Air in Chrome with tabs and bookmarks. 1366x768: the most common small laptop.
+  for (const [w, h] of [[1280, 800], [1440, 900], [1470, 800], [1366, 768]]) CASES.push({ reader, w, h, chat: false, view: "default" })
   CASES.push({ reader, w: 1440, h: 900, chat: true, view: "default" })
   for (const view of ["numbers-first", "by-company", "only-new", "nothing-matches"]) CASES.push({ reader, w: 1280, h: 800, chat: false, view })
 }
@@ -131,9 +132,12 @@ const MEASURE = `(() => {
   // Spare room: how far the last section ends above the bottom of the front page.
   const front = document.querySelector("[data-front]")
   let spare = null
+  // Measured to the real content (the last list row and the figure), not to the row boxes,
+  // because the bottom row stretches to fill the space.
   if (front) {
     const pad = parseFloat(getComputedStyle(front).paddingBottom) || 0
-    const bottom = Math.max(...[...front.children].map((c) => c.getBoundingClientRect().bottom))
+    const ends = [...front.querySelectorAll(".fp__row--hero, .fp__threads, .also > li:last-child, .fp__figure")]
+    const bottom = Math.max(...ends.map((c) => c.getBoundingClientRect().bottom))
     spare = Math.round(front.getBoundingClientRect().bottom - pad - bottom)
   }
   return { pageOverflow, regions, spare, innerHeight: window.innerHeight }

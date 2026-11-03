@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { Current, Item } from "@/lib/brief/types"
 import type { PageView } from "@/lib/view/model"
 import type { FrontPage as FrontModel, Hook } from "@/lib/front/front-page"
@@ -168,6 +168,21 @@ function AlsoThisWeek({
 }) {
   const [all, setAll] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
+  const list = useRef<HTMLUListElement>(null)
+  // A soft fade at the bottom while the list has more below (no visible scrollbar on the front page).
+  useEffect(() => {
+    const el = list.current
+    if (!el) return
+    const update = () => el.toggleAttribute("data-more", el.scrollTop + el.clientHeight < el.scrollHeight - 2)
+    update()
+    el.addEventListener("scroll", update, { passive: true })
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener("scroll", update)
+      ro.disconnect()
+    }
+  }, [open, all, items.length])
   if (items.length === 0) return null
   // Folded one-liners (a saved setting) stay behind the count until the reader asks for them.
   const rows = foldOneLiners && !all ? items.filter((i) => i.tier !== "one_liner") : items
@@ -181,7 +196,7 @@ function AlsoThisWeek({
       <h2 className="eyebrow fp__label" id="fp-also-t">
         {title}
       </h2>
-      <ul className="also">
+      <ul className="also" data-fit="also list" ref={list}>
         {shown.map((i) => {
           // Grouped views show the group (company, area). Otherwise a short area name helps,
           // long question-style areas add noise.

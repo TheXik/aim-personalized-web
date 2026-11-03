@@ -94,7 +94,7 @@ function changeLine(c: Change, after: ReturnType<typeof buildView>): string {
   switch (c.kind) {
     case "filter_added": {
       const d = after.directives.find((x) => x.id === c.filter.id)!
-      const when = c.filter.expires ? " This week only." : ""
+      const when = c.filter.expires ? " Just for this week's brief." : ""
       if (c.filter.mode === "keep") {
         return d.matched === 0
           ? `${filterSummary(c.filter)}: nothing matches this week.${when}`

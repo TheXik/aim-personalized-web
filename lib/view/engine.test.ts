@@ -83,7 +83,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
       const v = buildView(czsk, withSpec({ filters: [keep({ op: "eq", field: "status", value: "new" })] }))
       expect(v.shownTotal).toBe(5)
       expect(v.hiddenTotal).toBe(6)
-      expect(v.directives[0]).toMatchObject({ summary: "Only new this week", hidden: 6, state: "active" })
+      expect(v.directives[0]).toMatchObject({ summary: "Only new items", hidden: 6, state: "active" })
       expect(v.sections.find((s) => s.key === "tier:detail")?.emptyNote).toMatch(/No in-detail stories/)
     })
 

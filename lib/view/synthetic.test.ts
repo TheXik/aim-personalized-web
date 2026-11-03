@@ -78,7 +78,7 @@ describe("synthetic briefs: view engine", () => {
   it("only what is new", () => {
     const v = buildView(orbital, withSpec({ filters: [keep({ op: "eq", field: "status", value: "new" })] }))
     expect(v.shownTotal).toBe(5)
-    expect(v.directives[0].summary).toBe("Only new this week")
+    expect(v.directives[0].summary).toBe("Only new items")
   })
 
   it("hide the one-liners", () => {

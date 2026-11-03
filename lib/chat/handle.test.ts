@@ -50,7 +50,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
       ])
       expect(r.changed).toBe(true)
       expect(r.spec.filters).toHaveLength(1)
-      expect(r.reply).toMatch(/^Only new this week\. Showing 5:/)
+      expect(r.reply).toMatch(/^Only new items\. Showing 5:/)
       expect(r.reply).toMatch(/This hides 6 of 11 items\./)
       expect(r.offer?.label).toBe("Show new and updated stories")
     })
@@ -169,7 +169,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
         { op: "filter", mode: "hide", where: { op: "eq", field: "company", value: "Bessemer Venture Partners" }, duration: "this_week" },
       ])
       expect(r.spec.filters[0].expires).toBe(ea.recapId)
-      expect(r.reply).toMatch(/This week only\./)
+      expect(r.reply).toMatch(/Just for this week's brief\./)
     })
 
     it("an empty request makes no model call", async () => {

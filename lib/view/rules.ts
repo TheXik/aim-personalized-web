@@ -154,7 +154,7 @@ export function validateRule(rule: Rule, brief: Brief, readerText: string): Rule
 // ---------- Code-written descriptions (chips, band titles, replies) ----------
 
 const TIER_NAMES: Record<string, string> = { detail: "in-detail stories", brief: "in-brief items", one_liner: "one-liners" }
-const STATUS_NAMES: Record<string, string> = { new: "new this week", updated: "updated stories", carried: "carried-over stories", other: "other stories" }
+const STATUS_NAMES: Record<string, string> = { new: "new items", updated: "updated stories", carried: "carried-over stories", other: "other stories" }
 
 const quote = (s: string) => `“${s}”`
 const joinList = (xs: string[], word: "or" | "and") =>

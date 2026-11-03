@@ -7,7 +7,7 @@ const APP = "https://app.startaiming.com/o/"
  * Vertical rail on narrow containers, four columns on a wide one (CSS container query).
  * The latest point is filled, the earlier ones are rings.
  */
-export function Timeline({ block }: { block: TimelineBlock }) {
+export function Timeline({ block, linked = true }: { block: TimelineBlock; linked?: boolean }) {
   const last = block.points.length - 1
   return (
     <ol className="tl" style={{ ["--tl-n" as string]: Math.max(block.points.length, 1) }}>
@@ -18,7 +18,7 @@ export function Timeline({ block }: { block: TimelineBlock }) {
             {formatDay(p.date)}
           </time>
           <p className="tl__text">
-            {p.update_id ? (
+            {linked && p.update_id ? (
               <a className="tl__link" href={`${APP}${p.update_id}`} target="_blank" rel="noreferrer">
                 {p.text}
               </a>

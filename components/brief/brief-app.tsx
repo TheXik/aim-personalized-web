@@ -2,27 +2,30 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { TagsFile } from "@/lib/brief/schema"
-import type { Brief, Item } from "@/lib/brief/types"
+import type { Brief } from "@/lib/brief/types"
 import { normalizeBrief } from "@/lib/brief/normalize"
 import { buildView } from "@/lib/view/engine"
 import type { PageView } from "@/lib/view/model"
 import { DEFAULT_SPEC, parseStoredSpec, specStorageKey, type ViewSpec } from "@/lib/view/spec"
 import { applyOps } from "@/lib/view/apply"
-import { toAgentMarkdown } from "@/lib/export/agent-markdown"
 import { composeReply, type Offer } from "@/lib/view/reply"
-import { ChatPanel, type ChatStep, type ChatTurn, type Suggestion } from "@/components/chat/chat-panel"
-import { BriefView, Rail, TopBar } from "./brief-view"
-import { sectionDomId } from "./section"
+import { toAgentMarkdown } from "@/lib/export/agent-markdown"
+import { buildFrontPage } from "@/lib/front/front-page"
+import { ChatDock, ChatPanel, type ChatStep, type ChatTurn, type Suggestion } from "@/components/chat/chat-panel"
+import { FrontPage } from "@/components/front/front-page"
+import { TopBar } from "@/components/front/top-bar"
+import { ViewControls } from "@/components/front/view-controls"
+import { CHAT_OPEN_KEY, usePersistedFlag } from "@/components/front/use-persisted-flag"
+import { ReadingPanel, type Reading } from "@/components/reader/reading-panel"
 import { clearSetting, settingChips } from "./setting-chips"
-import { ReadingProvider, useMedia } from "./ui-state"
+import { useMedia } from "./ui-state"
 
-type Sheet = "dock" | "half" | "full"
 type Load = { state: "loading" } | { state: "error" } | { state: "ready"; brief: Brief }
 
 const CHAT_TIMEOUT_MS = 15_000
 
-// The brief's own example requests, shown before the first message.
-const EXAMPLES = ["Only what is new this week", "Numbers first", "Hide the one-liners", "Group it by company"]
+// Plain-language examples, the brief's own four requests. Each also works with the model down.
+const EXAMPLES = ["Only what's new this week", "Numbers first", "Hide the one-liners", "Group it by company"]
 
 // The engine is pure and tested. If a stored spec ever trips it, show the default design.
 function safeView(brief: Brief, spec: ViewSpec): PageView {
@@ -33,20 +36,18 @@ function safeView(brief: Brief, spec: ViewSpec): PageView {
   }
 }
 
-export function BriefApp({ reader, readerName, tags }: { reader: string; readerName: string; tags: TagsFile | null }) {
+export function BriefApp({ reader, tags }: { reader: string; readerName: string; tags: TagsFile | null }) {
   const [load, setLoad] = useState<Load>({ state: "loading" })
   const [attempt, setAttempt] = useState(0)
   const [spec, setSpec] = useState<ViewSpec>(DEFAULT_SPEC)
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [busy, setBusy] = useState(false)
-  const [sheet, setSheet] = useState<Sheet>("dock")
-  const [chatOpen, setChatOpen] = useState(true)
-  const [activeSection, setActiveSection] = useState<string | null>(null)
-  const reading = useRef<HTMLDivElement>(null)
+  const [reading, setReading] = useState<Reading | null>(null)
+  const [sheet, setSheet] = useState<"half" | "full">("half")
+  const [chatOpen, setChatOpen] = usePersistedFlag(CHAT_OPEN_KEY, false)
   const offerRequest = useRef("")
-
-  const wide = useMedia("(min-width: 840px)", true)
-  const laptop = useMedia("(min-width: 1200px)", true)
+  // One-screen layout from 1024px wide (laptops, tablets in landscape). Below it the page stacks.
+  const desk = useMedia("(min-width: 1024px)", true)
 
   // The brief, as if from Aim's API, and the reader's saved view (per reader, survives a reload).
   useEffect(() => {
@@ -78,26 +79,31 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
 
   const brief = load.state === "ready" ? load.brief : null
   const view = useMemo(() => (brief ? safeView(brief, spec) : null), [brief, spec])
-  const itemsByKey = useMemo(() => new Map<string, Item>((brief?.items ?? []).map((i) => [i.key, i])), [brief])
-  const currentLabels = useMemo(() => (brief?.currents ?? []).map((c) => c.label), [brief])
+  const fp = useMemo(() => (view ? buildFrontPage(view) : null), [view])
   const settings = useMemo(() => settingChips(spec), [spec])
-  const ruleCount = spec.filters.length + spec.pins.length + settings.length
+  const changes = spec.filters.length + spec.pins.length + settings.length
 
-  // Which section is on screen, for the laptop index.
+  // The reading panel is part of the browser history, so Back closes it (phones especially).
+  const openReading = useCallback(
+    (r: Reading) => {
+      const hash = `#${r.kind === "story" ? `story-${r.key.split(":").pop()}` : r.kind === "thread" ? "thread" : "more"}`
+      if (reading) window.history.replaceState({ aimReading: true }, "", hash)
+      else window.history.pushState({ aimReading: true }, "", hash)
+      setReading(r)
+    },
+    [reading],
+  )
+  const closeReading = useCallback(() => {
+    if (window.history.state?.aimReading) window.history.back()
+    else setReading(null)
+  }, [])
   useEffect(() => {
-    const root = reading.current
-    if (!root || !view) return
-    const els = Array.from(root.querySelectorAll<HTMLElement>("section.sec"))
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const top = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-        if (top) setActiveSection(top.target.id)
-      },
-      { root, rootMargin: "0px 0px -70% 0px" },
-    )
-    els.forEach((el) => obs.observe(el))
-    return () => obs.disconnect()
-  }, [view])
+    const onPop = () => {
+      if (!window.history.state?.aimReading) setReading(null)
+    }
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
+  }, [])
 
   const send = useCallback(
     async (text: string) => {
@@ -133,7 +139,7 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
           role: "assistant",
           state: "error",
           text: timedOut
-            ? "That took too long, so I left your page as it was. Try again, or pick one of the suggestions."
+            ? "That took too long, so I left your page as it was. Try again, or pick one of the examples."
             : "I could not reach the model, so your page is unchanged. Your saved view still works.",
           steps: [],
           offer: null,
@@ -162,100 +168,78 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
 
   const suggestions: Suggestion[] = EXAMPLES.map((label) => ({ label, run: () => send(label) }))
   const reset = () => saveSpec(DEFAULT_SPEC)
-  const removeDirective = (id: string) =>
+  const removeRule = (id: string) =>
     saveSpec({ ...spec, filters: spec.filters.filter((f) => f.id !== id), pins: spec.pins.filter((p) => p.id !== id) })
+  const closeChat = useCallback(() => setChatOpen(false), [setChatOpen])
 
-  if (load.state !== "ready" || !view || !brief) {
+  if (load.state !== "ready" || !view || !brief || !fp) {
     return (
-      <Frame wide={wide} chatOpen={false} sheet="dock" readerName={readerName}>
-        {load.state === "error" ? (
-          <div className="reading__inner">
-            <p className="mast__week">Your market</p>
-            <p className="mast__verdict">This week&apos;s brief did not load.</p>
-            <p className="item__p">
-              <button
-                type="button"
-                className="linkbtn"
-                onClick={() => {
-                  setLoad({ state: "loading" })
-                  setAttempt((a) => a + 1)
-                }}
-              >
-                Try again
-              </button>
-            </p>
-          </div>
-        ) : (
-          <Skeleton />
-        )}
-      </Frame>
+      <BriefLoading
+        failed={load.state === "error"}
+        onRetry={() => {
+          setLoad({ state: "loading" })
+          setAttempt((a) => a + 1)
+        }}
+      />
     )
   }
 
+  const viewControls = (
+    <ViewControls
+      view={view}
+      settings={settings}
+      onRemoveRule={removeRule}
+      onClearSetting={(id) => saveSpec(clearSetting(spec, id))}
+      onReset={reset}
+    />
+  )
+
   return (
-    <ReadingProvider currents={currentLabels}>
-      <div className="shell" data-sheet={wide ? undefined : sheet} data-chat={chatOpen ? "open" : "closed"}>
-        <div className="shell__top">
-          <TopBar
-            readerName={readerName}
-            chatOpen={chatOpen}
-            onToggleChat={() => setChatOpen((o) => !o)}
-            showChatToggle={wide}
-            getMarkdown={() => toAgentMarkdown({ view, settings: settings.map((c) => c.label) })}
-          />
-        </div>
-        {laptop ? (
-          <div className="shell__rail">
-            <Rail view={view} itemsByKey={itemsByKey} activeSection={activeSection?.replace(/^sec-/, "") ? keyFor(view, activeSection) : null} />
+    <div className="app" data-chat={chatOpen ? "open" : "closed"} data-sheet={!desk && chatOpen ? sheet : undefined}>
+      <TopBar
+        periodStart={view.periodStart}
+        periodEnd={view.periodEnd}
+        changes={changes}
+        hidden={view.hiddenTotal}
+        chatOpen={chatOpen}
+        onChat={() => setChatOpen(!chatOpen)}
+        getMarkdown={() => toAgentMarkdown({ view, settings: settings.map((c) => c.label) })}
+        showChatButton={desk}
+      />
+      <main className="app__main" data-front-ready>
+        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} stacked={!desk} />
+        {reading ? (
+          <div className="rp-layer">
+            <div className="rp-scrim" onClick={closeReading} aria-hidden="true" />
+            <ReadingPanel
+              reading={reading}
+              order={fp.order}
+              threads={fp.threads}
+              moreItems={fp.also}
+              parts={view.parts}
+              showUpdates={view.updates !== null}
+              onOpen={openReading}
+              onClose={closeReading}
+            />
           </div>
         ) : null}
-        <main className="shell__main">
-          <div className="reading" ref={reading}>
-            <BriefView
-              brief={brief}
-              view={view}
-              itemsByKey={itemsByKey}
-              currentsInline={!laptop}
-              settings={settings}
-              onRemoveDirective={removeDirective}
-              onClearSetting={(id) => saveSpec(clearSetting(spec, id))}
-              onReset={reset}
-            />
-          </div>
-        </main>
-        <div className="shell__chat">
-          {wide ? (
-            chatOpen ? (
-              <ChatPanel
-                variant="pane"
-                turns={turns}
-                busy={busy}
-                suggestions={suggestions}
-                ruleCount={ruleCount}
-                onSend={send}
-                onOffer={takeOffer}
-                onReset={reset}
-                onClose={() => setChatOpen(false)}
-              />
-            ) : null
-          ) : (
-            <ChatPanel
-              variant="sheet"
-              sheet={sheet}
-              onSheet={setSheet}
-              turns={turns}
-              busy={busy}
-              suggestions={suggestions}
-              ruleCount={ruleCount}
-              onSend={send}
-              onOffer={takeOffer}
-              onReset={reset}
-              onClose={() => setSheet("dock")}
-            />
-          )}
-        </div>
-      </div>
-    </ReadingProvider>
+      </main>
+      {chatOpen && !(reading && desk) ? (
+        <ChatPanel
+          variant={desk ? "card" : "sheet"}
+          sheet={sheet}
+          onSheet={setSheet}
+          turns={turns}
+          busy={busy}
+          suggestions={suggestions}
+          viewControls={viewControls}
+          onSend={send}
+          onOffer={takeOffer}
+          onClose={closeChat}
+        />
+      ) : null}
+      {!desk && !chatOpen ? <ChatDock changes={changes} onOpen={() => setChatOpen(true)} /> : null}
+    </div>
   )
 }
 
@@ -272,12 +256,6 @@ function splitReply(reply: string): { text: string; steps: ChatStep[] } {
   return { text: lines[0], steps: lines.slice(1).map((title) => ({ title })) }
 }
 
-function keyFor(view: PageView, domId: string | null): string | null {
-  if (!domId) return null
-  const all = view.emptyFallback ? view.emptyFallback.sections : view.sections
-  return all.find((s) => sectionDomId(s.key) === domId)?.key ?? null
-}
-
 function readStoredSpec(reader: string): ViewSpec {
   try {
     const stored = window.localStorage.getItem(specStorageKey(reader))
@@ -287,50 +265,35 @@ function readStoredSpec(reader: string): ViewSpec {
   }
 }
 
-function Frame({
-  children,
-  wide,
-  chatOpen,
-  sheet,
-  readerName,
-}: {
-  children: React.ReactNode
-  wide: boolean
-  chatOpen: boolean
-  sheet: Sheet
-  readerName: string
-}) {
+/** The page while the brief loads, also the route's Suspense fallback. */
+export function BriefLoading({ failed = false, onRetry }: { failed?: boolean; onRetry?: () => void; readerName?: string }) {
   return (
-    <div className="shell" data-sheet={wide ? undefined : sheet} data-chat={chatOpen ? "open" : "closed"}>
-      <div className="shell__top">
-        <TopBar readerName={readerName} chatOpen={chatOpen} onToggleChat={() => {}} showChatToggle={false} />
-      </div>
-      <main className="shell__main">
-        <div className="reading">{children}</div>
+    <div className="app" data-chat="closed">
+      <header className="tb">
+        <span className="tb__brand">Aim</span>
+      </header>
+      <main className="app__main">
+        <div className="fp" aria-busy={!failed}>
+          {failed ? (
+            <div className="fp__lead">
+              <p className="eyebrow fp__kicker">Your market brief</p>
+              <h1 className="fp__verdict">This week&apos;s brief did not load.</h1>
+              <div className="fp__start">
+                <button type="button" className="fp__btn" onClick={onRetry}>
+                  Try again
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="fp__lead" aria-label="Loading this week's brief">
+              <div className="skel" style={{ width: 160, height: 12, marginBottom: 20 }} />
+              <div className="skel" style={{ width: "92%", height: 30, marginBottom: 12 }} />
+              <div className="skel" style={{ width: "84%", height: 30, marginBottom: 12 }} />
+              <div className="skel" style={{ width: "58%", height: 30 }} />
+            </div>
+          )}
+        </div>
       </main>
-    </div>
-  )
-}
-
-/** The shell while the brief loads, also the route's Suspense fallback. */
-export function BriefLoading({ readerName = "" }: { readerName?: string }) {
-  return (
-    <Frame wide chatOpen={false} sheet="dock" readerName={readerName}>
-      <Skeleton />
-    </Frame>
-  )
-}
-
-function Skeleton() {
-  return (
-    <div className="reading__inner" aria-busy="true" aria-label="Loading this week's brief">
-      <div className="skel" style={{ width: 220, height: 12, marginBottom: 24 }} />
-      <div className="skel" style={{ width: "92%", height: 28, marginBottom: 10 }} />
-      <div className="skel" style={{ width: "86%", height: 28, marginBottom: 10 }} />
-      <div className="skel" style={{ width: "54%", height: 28, marginBottom: 40 }} />
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="skel" style={{ width: `${80 - i * 7}%`, height: 16, marginBottom: 22 }} />
-      ))}
     </div>
   )
 }

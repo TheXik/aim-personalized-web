@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import type { KeyboardEvent } from "react"
+import type { KeyboardEvent, ReactNode } from "react"
 import { AimMark } from "@/components/brief/aim-mark"
 import type { Offer } from "@/lib/view/reply"
 
-// The chat that reshapes the page. It follows Aim's own "Ask Aim" panel:
-// user bubble on the right, Aim's reply on the left as numbered steps in mono.
+// "Change what you see": the chat that reshapes the page. It only changes the view,
+// it never answers questions or writes text. Its look follows Aim's own "Ask Aim"
+// panel: the reader's words on the right, Aim's reply on the left as numbered steps.
 // Every reply line is written by our code from the change that was applied.
 
 export type ChatStep = { title: string; detail?: string | null; meta?: string | null }
@@ -16,53 +17,56 @@ export type ChatTurn =
   | { id: string; role: "assistant"; state: "pending" }
   | { id: string; role: "assistant"; state: "done" | "error"; text: string; steps: ChatStep[]; offer: Offer | null }
 
-export type Suggestion = { label: string; hint?: string; run: () => void }
+export type Suggestion = { label: string; run: () => void }
 
 export const MAX_MESSAGE = 500
 
 export function ChatPanel({
   variant,
-  onOffer,
   turns,
   busy,
   suggestions,
-  ruleCount,
+  viewControls,
   onSend,
-  onReset,
+  onOffer,
   onClose,
   sheet,
   onSheet,
 }: {
-  variant: "pane" | "sheet"
+  // card: floating panel on a laptop. sheet: bottom sheet on a phone or tablet.
+  variant: "card" | "sheet"
   turns: ChatTurn[]
   busy: boolean
   suggestions: Suggestion[]
-  ruleCount: number
+  // The reader's saved changes as removable chips, with Reset. Null in the default view.
+  viewControls: ReactNode
   onSend: (text: string) => void
-  onReset: () => void
-  onClose: () => void
-  sheet?: "dock" | "half" | "full"
-  onSheet?: (s: "dock" | "half" | "full") => void
   onOffer: (turnId: string, offer: Offer) => void
+  onClose: () => void
+  sheet?: "half" | "full"
+  onSheet?: (s: "half" | "full") => void
 }) {
   const [text, setText] = useState("")
   const scroller = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
+  const lastId = turns[turns.length - 1]?.id
 
   useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })
+    if (turns.length > 0) scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })
   }, [turns])
 
   useEffect(() => {
-    if (variant !== "sheet" || sheet === "dock") return
+    input.current?.focus({ preventScroll: true })
+  }, [])
+
+  useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") onSheet?.("dock")
+      if (e.key === "Escape") onClose()
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [variant, sheet, onSheet])
+  }, [onClose])
 
-  const lastId = turns[turns.length - 1]?.id
   const send = () => {
     const t = text.trim()
     if (!t || busy) return
@@ -76,47 +80,27 @@ export function ChatPanel({
     }
   }
 
-  if (variant === "sheet" && sheet === "dock") {
-    return (
-      <div className="dock">
-        <button
-          type="button"
-          className="dock__field"
-          onClick={() => {
-            onSheet?.("half")
-            requestAnimationFrame(() => input.current?.focus())
-          }}
-        >
-          <AimMark size={16} spin={false} />
-          <span>Reshape this brief in your words</span>
-        </button>
-        {ruleCount > 0 ? (
-          <span className="dock__count" aria-label={`${ruleCount} saved changes`}>
-            {ruleCount}
-          </span>
-        ) : null}
-      </div>
-    )
-  }
-
   return (
-    <section className={`chat chat--${variant}`} aria-label="Reshape this brief">
+    <section className={`chat chat--${variant}`} id="change-panel" aria-label="Change what you see" data-sheet={sheet}>
       {variant === "sheet" ? (
         <button
           type="button"
           className="chat__grabber"
-          aria-label={sheet === "full" ? "Make the chat smaller" : "Make the chat bigger"}
+          aria-label={sheet === "full" ? "Make the panel smaller" : "Make the panel bigger"}
           onClick={() => onSheet?.(sheet === "full" ? "half" : "full")}
         >
           <span />
         </button>
       ) : null}
       <header className="chat__head">
+        <span className="chat__mark" aria-hidden="true">
+          <AimMark size={16} spin={false} />
+        </span>
         <div>
-          <h2 className="chat__title">Reshape this brief</h2>
-          <p className="chat__sub">Changes are saved and apply to next week too</p>
+          <h2 className="chat__title">Change what you see</h2>
+          <p className="chat__sub">Say it in plain words. Next week&apos;s brief opens the same way.</p>
         </div>
-        <button type="button" className="chat__close" aria-label={variant === "sheet" ? "Close the chat" : "Hide the chat"} onClick={onClose}>
+        <button type="button" className="chat__close" aria-label="Close" onClick={onClose}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M3 3l8 8M11 3 3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
@@ -124,16 +108,17 @@ export function ChatPanel({
       </header>
 
       <div className="chat__scroll" ref={scroller}>
+        {viewControls}
         {turns.length === 0 ? (
           <div className="chat__intro">
             <p>
-              Tell Aim how you want to read this brief. It can filter, reorder, group and hide parts of it. It never
-              writes new text, so every word on the page stays from your brief.
+              Filter, reorder, group or hide parts of this brief. It changes only what you see. It never adds words to
+              your brief or answers questions about the news.
             </p>
-            <span className="eyebrow">Try one</span>
-            <div className="chat__suggest">
+            <span className="eyebrow">Try</span>
+            <div className="chat__suggest chat__suggest--list">
               {suggestions.map((s) => (
-                <button key={s.label} type="button" className="chip chip--plain" title={s.hint} onClick={s.run} disabled={busy}>
+                <button key={s.label} type="button" className="chat__try" onClick={s.run} disabled={busy}>
                   {s.label}
                 </button>
               ))}
@@ -150,7 +135,7 @@ export function ChatPanel({
                     <span className="turn__avatar" aria-hidden="true">
                       <AimMark size={16} />
                     </span>
-                    <p className="turn__text turn__text--pending">Reading your request</p>
+                    <p className="turn__text turn__text--pending">Changing your view</p>
                   </div>
                 ) : (
                   <div className="turn__aim">
@@ -203,25 +188,30 @@ export function ChatPanel({
           className="chat__input"
           rows={1}
           maxLength={MAX_MESSAGE}
-          placeholder="What do you want to see first?"
+          placeholder="For example: only what's new"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        <button type="submit" className="chat__send" aria-label="Send" disabled={busy || !text.trim()}>
+        <button type="submit" className="chat__send" aria-label="Apply" disabled={busy || !text.trim()}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M7 11.5V2.5M3 6.5l4-4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </svg>
         </button>
       </form>
-      <div className="chat__foot">
-        <span className="eyebrow">{ruleCount === 0 ? "Default view" : `${ruleCount} saved ${ruleCount === 1 ? "change" : "changes"}`}</span>
-        {ruleCount > 0 ? (
-          <button type="button" className="linkbtn" onClick={onReset}>
-            Reset to default
-          </button>
-        ) : null}
-      </div>
     </section>
+  )
+}
+
+/** Phone: the one line the panel takes when closed. */
+export function ChatDock({ changes, onOpen }: { changes: number; onOpen: () => void }) {
+  return (
+    <div className="dock">
+      <button type="button" className="dock__field" onClick={onOpen} aria-controls="change-panel" aria-expanded={false}>
+        <AimMark size={16} spin={false} />
+        <span>Change what you see</span>
+        {changes > 0 ? <span className="dock__count">{changes}</span> : null}
+      </button>
+    </div>
   )
 }

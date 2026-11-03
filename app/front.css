@@ -1,0 +1,270 @@
+/*
+ * The one-screen front page (mockup A's structure, mockup C's calm).
+ * From 1024px wide the page is exactly one viewport: the app is 100dvh and nothing scrolls.
+ * Below 1024px the same sections stack in the same order and the document scrolls.
+ * Sizes step down on short laptop screens (max-height queries) so 1280x800 fits.
+ */
+
+.app {
+  --fp-max: 1184px;
+  --fp-pad-x: 48px;
+  --fp-gap: 30px;
+  --fp-top: 34px;
+  --fp-verdict: 32px;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 56px auto;
+  background: var(--background);
+  color: var(--b-title);
+  font-family: var(--b-sans);
+}
+@media (min-width: 1024px) {
+  .app { height: 100dvh; grid-template-rows: 56px minmax(0, 1fr); overflow: hidden; }
+}
+
+
+/* ---------- Top bar ---------- */
+
+.tb {
+  position: sticky; top: 0; z-index: 40; height: 56px; display: flex; align-items: center; gap: 14px;
+  padding: 0 max(var(--fp-pad-x), calc((100% - var(--fp-max)) / 2)); background: var(--background);
+  border-bottom: 1px solid var(--b-line);
+}
+.tb__brand { display: inline-flex; align-items: center; gap: 8px; color: var(--b-ink); font-weight: 600; font-size: 18px; letter-spacing: -0.02em; text-decoration: none; }
+.tb__date { font-family: var(--b-mono); font-size: 12px; color: var(--b-muted); white-space: nowrap; padding-left: 14px; border-left: 1px solid var(--b-line-strong); }
+.tb__spacer { flex: 1; }
+.tb__view {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--b-line-strong); background: var(--b-paper-soft); font: inherit; font-size: 13px; font-weight: 500; color: var(--b-title);
+}
+.tb__view:hover { background: var(--b-paper); }
+.tb__viewdot { width: 6px; height: 6px; border-radius: 999px; background: var(--b-new); }
+.tb__viewmeta { font-family: var(--b-mono); font-size: 11px; font-weight: 400; color: var(--b-muted); }
+.tb__chat {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--n-900); background: var(--n-900); color: #fff; font: inherit; font-size: 14px; font-weight: 500;
+  transition: background var(--dur-hover) var(--ease-standard);
+}
+.tb__chat:hover { background: var(--accent-gradient); border-color: transparent; }
+.tb__chat[aria-expanded="true"] { background: var(--background); color: var(--n-900); border-color: var(--b-line-strong); }
+/* Copy for your agent */
+.top__btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--b-line-strong); background: var(--background); font: inherit; font-size: 13px; font-weight: 500; color: var(--b-title);
+  transition: background-color var(--dur-hover) var(--ease-standard), border-color var(--dur-hover) var(--ease-standard);
+}
+.top__btn:hover { background: var(--b-paper); }
+.top__btn.is-done { color: var(--aim-sage-ink); border-color: var(--aim-sage-200); background: var(--aim-sage-50); }
+.top__btnshort { display: none; }
+@media (max-width: 599px) {
+  .top__btnlong { display: none; }
+  .top__btnshort { display: inline; }
+}
+@media (max-width: 1023px) {
+  .tb { padding: 0 16px; gap: 10px; }
+  .tb__view .tb__viewmeta { display: none; }
+}
+@media (max-width: 599px) {
+  .tb__date { display: none; }
+  .tb__view { display: none; }
+}
+
+/* ---------- Main area ---------- */
+
+.app__main { position: relative; min-height: 0; }
+@media (min-width: 1024px) { .app__main { overflow: hidden; } }
+
+.fp {
+  max-width: calc(var(--fp-max) + 2 * var(--fp-pad-x)); margin: 0 auto; padding: var(--fp-top) var(--fp-pad-x) 20px;
+  display: flex; flex-direction: column; gap: var(--fp-gap);
+}
+@media (min-width: 1024px) { .fp { height: 100%; overflow: hidden; } }
+@media (max-width: 1023px) { .fp { --fp-pad-x: 20px; padding-bottom: 96px; gap: 36px; } }
+
+.fp__row { display: grid; gap: 56px; align-items: start; }
+.fp__row--hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.fp__row--base { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+/* A removed section leaves no hole: the remaining one takes the row. */
+.fp__row > :only-child { grid-column: 1 / -1; }
+@media (max-width: 1023px) {
+  .fp__row, .fp__row--hero, .fp__row--base { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  /* Stacked order follows the brief: verdict, takeaways, threads, the figure, then the rest. */
+  .fp__row--base .fp__figure { order: -1; }
+}
+
+.fp__label { margin: 0; font-weight: 400; }
+.fp__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.fp__hint { font-family: var(--b-mono); font-size: 11px; color: var(--b-faint); }
+@media (max-width: 599px) { .fp__hint { display: none; } }
+
+/* ---------- Lead: the verdict ---------- */
+
+.fp__kicker { margin: 0 0 12px; }
+.fp__verdict {
+  margin: 0; font-size: var(--fp-verdict); line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; color: var(--b-ink); text-wrap: pretty;
+}
+.fp__start { display: flex; align-items: center; gap: 16px; margin-top: 22px; }
+.fp__btn {
+  height: 42px; padding: 0 20px; border-radius: 6px; border: 0; cursor: pointer; background: var(--n-900); color: #fff;
+  font: inherit; font-size: 15px; font-weight: 500; transition: background var(--dur-hover) var(--ease-standard);
+}
+.fp__btn:hover { background: var(--accent-gradient); }
+.fp__count { font-family: var(--b-mono); font-size: 12px; color: var(--b-muted); }
+@media (max-width: 599px) { .fp__verdict { font-size: 26px; line-height: 1.22; } }
+
+/* ---------- Takeaways ---------- */
+
+.tk { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
+.tk__item { display: grid; grid-template-columns: 3px minmax(0, 1fr); column-gap: 16px; }
+.tk__item::before {
+  content: ""; grid-row: 1 / 3; border-radius: 3px; background: linear-gradient(180deg, var(--blue-600), var(--blue-400)); box-shadow: var(--shadow-quote-bar);
+}
+.tk__text { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--b-ink); text-wrap: pretty; }
+.tk__why {
+  justify-self: start; margin-top: 6px; padding: 0; border: 0; background: none; cursor: pointer; text-align: left;
+  font-family: var(--b-mono); font-size: 11.5px; line-height: 1.5; color: var(--b-muted);
+}
+.tk__why span { color: var(--b-meta); text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px; }
+.tk__why:hover span { color: var(--b-ink); text-decoration-color: var(--b-faint); }
+
+/* ---------- Threads ---------- */
+
+.cards { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 12px; }
+.cards > li { display: flex; }
+.card {
+  width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 16px; text-align: left; cursor: pointer; font: inherit;
+  border: 1px solid var(--b-line-strong); border-radius: 10px; background: var(--background);
+  transition: border-color var(--dur-hover) var(--ease-standard), box-shadow var(--dur-hover) var(--ease-standard), transform var(--dur-hover) var(--ease-standard);
+}
+.card:hover { border-color: var(--b-faint); box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
+.card__meta { display: flex; justify-content: space-between; gap: 8px; font-family: var(--b-mono); font-size: 11px; color: var(--b-muted); }
+.card__status { display: inline-flex; align-items: center; gap: 6px; }
+.card__dot { width: 6px; height: 6px; border-radius: 999px; box-shadow: inset 0 0 0 1.25px var(--b-faint); }
+.card__status--new { color: var(--b-new); }
+.card__status--new .card__dot { background: var(--b-new); box-shadow: none; }
+.card__status--updated .card__dot { background: var(--b-meta); box-shadow: none; }
+.card__age { color: var(--b-faint); white-space: nowrap; }
+.card__label {
+  font-size: 15px; line-height: 1.35; font-weight: 600; color: var(--b-ink); letter-spacing: -0.006em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.card__line {
+  font-size: 13px; line-height: 1.45; color: var(--b-muted);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+@media (max-width: 1023px) {
+  .cards { grid-template-columns: minmax(0, 1fr); gap: 0; border-top: 1px solid var(--b-line); }
+  .card { border: 0; border-bottom: 1px solid var(--b-line); border-radius: 0; padding: 14px 0; }
+  .card:hover { box-shadow: none; transform: none; }
+  .card__line { -webkit-line-clamp: 2; }
+}
+
+/* ---------- Also this week ---------- */
+
+.also { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--b-line); }
+.also > li { border-bottom: 1px solid var(--b-line); }
+.also__row {
+  width: 100%; display: flex; align-items: baseline; gap: 16px; padding: 9px 0; border: 0; background: none; cursor: pointer; text-align: left; font: inherit;
+}
+.also__text { flex: 1; min-width: 0; font-size: 14px; line-height: 1.45; color: var(--b-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.also__row:hover .also__text { text-decoration: underline; text-decoration-color: var(--b-faint); text-underline-offset: 3px; }
+.also__scope { flex: none; max-width: 40%; font-family: var(--b-mono); font-size: 11px; color: var(--b-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.also__more { align-items: center; color: var(--b-meta); }
+.also__more .also__text { color: var(--b-meta); font-weight: 500; }
+@media (max-width: 1023px) { .also__text { white-space: normal; } }
+
+/* ---------- Figure of the week ---------- */
+
+.fp__figure { position: relative; }
+.hook { margin-top: 12px; border-radius: 12px; transition: box-shadow var(--dur-hover) var(--ease-standard); }
+.fp__figure:hover .hook { box-shadow: var(--shadow-card-hover); }
+.hook .fig { margin: 0; }
+.fig--hook { padding: 16px 20px 18px; }
+.fig--hook .fig__body { margin-top: 14px; }
+.hook__open {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: var(--b-mono); font-size: 11px; color: var(--b-faint);
+}
+/* The link covers the whole section, so the figure is one click target. */
+.hook__open::after { content: ""; position: absolute; inset: 0; border-radius: 12px; }
+.hook__open:focus-visible { outline: none; }
+.hook__open:focus-visible::after { outline: 2px solid var(--ring); outline-offset: 4px; }
+.fp__figure:hover .hook__open { color: var(--b-ink); }
+
+/* ---------- Your view, inside the panel ---------- */
+
+.vc { padding: 0 0 16px; margin: 0 0 16px; border-bottom: 1px solid var(--b-line); }
+.vc__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.vc__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vc__note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--b-muted); }
+.vc__note--warn { color: var(--aim-amber-ink); }
+
+/* ---------- Change what you see: card (laptop) and sheet (phone) ---------- */
+
+.chat--card {
+  position: fixed; z-index: 50; right: 20px; top: 68px; bottom: 20px; width: min(380px, calc(100vw - 40px)); height: auto;
+  border: 1px solid var(--b-line-strong); border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden;
+  animation: popIn 260ms var(--ease-out);
+}
+.chat__head { align-items: center; }
+.chat__mark { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: #fff; background: var(--accent-gradient); flex: none; }
+.chat__try {
+  display: block; width: 100%; padding: 11px 14px; text-align: left; cursor: pointer; font: inherit; font-size: 14px; color: var(--b-title);
+  border: 1px solid var(--b-line-strong); border-radius: 10px; background: var(--background);
+  transition: border-color var(--dur-hover) var(--ease-standard), background var(--dur-hover) var(--ease-standard);
+}
+.chat__try:hover { border-color: var(--b-faint); background: var(--b-paper-soft); }
+.chat__suggest--list { flex-direction: column; flex-wrap: nowrap; gap: 8px; }
+.chat__form { margin-bottom: 16px; }
+
+@media (max-width: 1023px) {
+  .chat--sheet {
+    position: fixed; z-index: 55; left: 0; right: 0; bottom: 0; height: 56dvh;
+    border-radius: 16px 16px 0 0; border: 1px solid var(--b-line-strong); border-bottom: 0;
+  }
+  .chat--sheet[data-sheet="full"] { height: calc(100dvh - 56px); }
+  .app[data-sheet] .fp { padding-bottom: calc(56dvh + 24px); }
+  .dock { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; height: auto; display: flex; }
+  .dock__field { justify-content: flex-start; color: var(--b-title); font-weight: 500; }
+  .dock__count { margin-left: auto; }
+}
+
+/* The front page timeline is compact, as in mockup A: one row per date, the date beside the text. */
+.fig--hook .tl { display: block; }
+.fig--hook .tl__pt { display: grid; grid-template-columns: 14px 54px minmax(0, 1fr); grid-template-rows: none; column-gap: 8px; padding: 0 0 9px; align-content: normal; }
+.fig--hook .tl__pt:last-child { padding-bottom: 0; }
+.fig--hook .tl__pt::before { left: 4px; top: 13px; bottom: -3px; right: auto; width: 1.5px; height: auto; }
+.fig--hook .tl__pt:last-child::before { display: none; }
+.fig--hook .tl__dot { grid-row: auto; width: 9px; height: 9px; margin: 4px 0 0; }
+.fig--hook .tl__date { line-height: 18px; }
+.fig--hook .tl__text { margin: 0; font-size: 13px; line-height: 18px; }
+.fig--hook .fig__head { font-size: 14.5px; }
+.fig--hook .tbl { font-size: 13px; }
+.fig--hook .tbl th, .fig--hook .tbl td { padding-top: 7px; padding-bottom: 7px; }
+.fig--hook .cmp__side { padding: 9px 12px 10px; }
+.fig--hook .cmp__name { font-size: 10px; letter-spacing: 0.04em; margin-bottom: 6px; }
+.fig--hook .cmp__list { gap: 4px; }
+.fig--hook .cmp__list li { font-size: 12.5px; line-height: 1.4; padding-left: 12px; }
+.fig--hook .bars { gap: 10px; }
+
+/* Phone: "N more this week" opens in place. */
+.also__less { color: var(--b-muted); }
+
+/* The front page comparison stays side by side down to 440px, so it never doubles in height. */
+@container (min-width: 440px) {
+  .fig--hook .cmp { grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr); align-items: stretch; }
+  .fig--hook .cmp__arrow { transform: none; height: auto; }
+}
+
+/* Short laptop screens (1280x800 and similar): the same page, a little tighter. Last, so it wins. */
+@media (min-width: 1024px) and (max-height: 860px) {
+  .app { --fp-gap: 20px; --fp-top: 22px; --fp-verdict: 28px; }
+  .tk { gap: 14px; margin-top: 10px; }
+  .cards, .also, .hook { margin-top: 10px; }
+  .card { padding: 12px 14px 13px; gap: 6px; }
+  .fp__start { margin-top: 18px; }
+  .fp { padding-bottom: 12px; }
+  .fig--hook { padding: 13px 16px 14px; }
+  .fig--hook .fig__body { margin-top: 10px; }
+  .card__line { -webkit-line-clamp: 1; }
+}

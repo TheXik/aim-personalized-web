@@ -132,7 +132,11 @@ export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult
     if (after.shownTotal === 0) {
       lines.push("Nothing is left with these settings, so the full brief shows below.")
     } else if (after.hiddenTotal > total / 2) {
-      lines.push(`This hides ${after.hiddenTotal} of ${total} items.`)
+      // Skip the total when one hide filter already said the same number.
+      const added = result.changes.filter((c) => c.kind === "filter_added")
+      const onlyHide = added.length === 1 && added[0].kind === "filter_added" && added[0].filter.mode === "hide"
+      const alreadySaid = onlyHide && after.directives.find((d) => added[0].kind === "filter_added" && d.id === added[0].filter.id)?.hidden === after.hiddenTotal
+      if (!alreadySaid) lines.push(`This hides ${after.hiddenTotal} of ${total} items.`)
       const newOnly = result.changes.find((c) => c.kind === "filter_added" && c.filter.mode === "keep" && isStatusNew(c.filter.where))
       if (newOnly && newOnly.kind === "filter_added" && !offer) {
         offer = {

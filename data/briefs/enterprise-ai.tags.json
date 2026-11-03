@@ -1,12 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "recap_id": "rcp_wmomG4au0E2kfW",
   "source": "brief-enterprise-ai.json",
   "method": "gpt-5-mini-hiring at reasoning effort low, run twice on 3 Nov 2026 (research/05-benchmark.md, experiment C). Kept the tags both runs returned that appear word for word in the item headline, paragraphs or means line. index is the position in recap.doc.items before any sorting.",
   "items": [
     {
       "index": 0,
-      "headline": "OpenAI paused frontier training after a sandbox bypass.",
+      "headline_hash": "01f0bdf4772724",
       "companies": [
         "OpenAI",
         "Google",
@@ -15,14 +15,14 @@
     },
     {
       "index": 1,
-      "headline": "Microsoft launched Copilot Autopilot and usage-based billing for agents.",
+      "headline_hash": "04223fe60dd8b7",
       "companies": [
         "Microsoft"
       ]
     },
     {
       "index": 2,
-      "headline": "Anthropic cut model prices; OpenAI matched within ninety minutes.",
+      "headline_hash": "117221abca9067",
       "companies": [
         "Anthropic",
         "OpenAI"
@@ -30,14 +30,14 @@
     },
     {
       "index": 3,
-      "headline": "Maple VC's Andre Charu shared 'inventor-builder-operator' founder test.",
+      "headline_hash": "00d7d658393cbb",
       "companies": [
         "Maple VC"
       ]
     },
     {
       "index": 4,
-      "headline": "Nscale raised $3.36B convertible notes led by Third Point.",
+      "headline_hash": "1481e121ebd651",
       "companies": [
         "Nscale",
         "Third Point"
@@ -45,21 +45,21 @@
     },
     {
       "index": 5,
-      "headline": "Oracle issued force majeure on the 2.45GW Project Jupiter AI campus build.",
+      "headline_hash": "1486319bdbb136",
       "companies": [
         "Oracle"
       ]
     },
     {
       "index": 6,
-      "headline": "Bessemer Venture Partners raised $5.75B for two AI-focused funds.",
+      "headline_hash": "050a26758b0177",
       "companies": [
         "Bessemer Venture Partners"
       ]
     },
     {
       "index": 7,
-      "headline": "Meta launched Muse and Expedia announced an integration partnership.",
+      "headline_hash": "128a9e6e7bf24e",
       "companies": [
         "Meta",
         "Expedia"
@@ -67,7 +67,7 @@
     },
     {
       "index": 8,
-      "headline": "Enveda raised $311M Series E led by Catalio Capital Management.",
+      "headline_hash": "14576fdad0592d",
       "companies": [
         "Enveda",
         "Catalio Capital Management"
@@ -75,7 +75,7 @@
     },
     {
       "index": 9,
-      "headline": "OpenEvidence raised $250M led by Andreessen Horowitz and Byers Capital.",
+      "headline_hash": "1a846b7289ae98",
       "companies": [
         "OpenEvidence",
         "Andreessen Horowitz",
@@ -84,14 +84,14 @@
     },
     {
       "index": 10,
-      "headline": "Precision Neuroscience closed a $250M Series D round.",
+      "headline_hash": "009485ad98b01f",
       "companies": [
         "Precision Neuroscience"
       ]
     },
     {
       "index": 11,
-      "headline": "Basalt Health raised $20M Series A led by NEA.",
+      "headline_hash": "08bdc19b8d997d",
       "companies": [
         "Basalt Health",
         "NEA"

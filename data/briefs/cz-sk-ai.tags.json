@@ -1,12 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "recap_id": "rcp_DzcstrmDUDmjg2",
   "source": "brief-cz-sk-ai.json",
   "method": "gpt-5-mini-hiring at reasoning effort low, run twice on 3 Nov 2026 (research/05-benchmark.md, experiment C). Kept the tags both runs returned that appear word for word in the item headline, paragraphs or means line. index is the position in recap.doc.items before any sorting.",
   "items": [
     {
       "index": 0,
-      "headline": "Mironet replaced Claude agents with Jev, cutting categorization costs 343×.",
+      "headline_hash": "1e87663a75628a",
       "companies": [
         "Mironet",
         "Jev",
@@ -15,7 +15,7 @@
     },
     {
       "index": 1,
-      "headline": "Macaly Cloud made Claude/ChatGPT deployments one-click, free until 1 October.",
+      "headline_hash": "00ce27bd1d8f56",
       "companies": [
         "Macaly Cloud",
         "team.blue"
@@ -23,31 +23,31 @@
     },
     {
       "index": 2,
-      "headline": "Cequence said billing agents get 105 tools when they need four.",
+      "headline_hash": "12118727a599e4",
       "companies": [
         "Cequence"
       ]
     },
     {
       "index": 3,
-      "headline": "Petra Stupková warned Czech leaders to treat AI pace as risk.",
+      "headline_hash": "1b769ee022ed4f",
       "companies": []
     },
     {
       "index": 4,
-      "headline": "Laati said its Gemini agent breached three companies in a security test.",
+      "headline_hash": "15def2d8dc0042",
       "companies": [
         "Laati"
       ]
     },
     {
       "index": 5,
-      "headline": "Adam Juřica argued for “safe acceleration” instead of slowing AI.",
+      "headline_hash": "14edb1d5e7c770",
       "companies": []
     },
     {
       "index": 6,
-      "headline": "CVC agreed to buy a minority stake in Prague’s CDN77 at $1.9B.",
+      "headline_hash": "0eaf3d5f377a81",
       "companies": [
         "CVC",
         "CDN77"
@@ -55,7 +55,7 @@
     },
     {
       "index": 7,
-      "headline": "EIF invested €27M in IP Lab Ventures Fund I.",
+      "headline_hash": "11dfaf9cc7bb5a",
       "companies": [
         "EIF",
         "IP Lab Ventures Fund I"
@@ -63,21 +63,21 @@
     },
     {
       "index": 8,
-      "headline": "VisionFlow raised €1.4M as a convertible loan maturing in December 2028.",
+      "headline_hash": "0abeb67bf676f6",
       "companies": [
         "VisionFlow"
       ]
     },
     {
       "index": 9,
-      "headline": "Ranketta won Startup of the Year 2026 and claimed 100+ customers.",
+      "headline_hash": "1859f56a5a6e67",
       "companies": [
         "Ranketta"
       ]
     },
     {
       "index": 10,
-      "headline": "BottleCap AI released ThinkingCap-Qwen3.8–27B claiming 37% fewer thinking tokens.",
+      "headline_hash": "045403b4b9deea",
       "companies": [
         "BottleCap AI"
       ]

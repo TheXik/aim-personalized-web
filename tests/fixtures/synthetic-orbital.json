@@ -1,0 +1,214 @@
+{
+  "_synthetic": "SYNTHETIC TEST DATA. Invented companies, numbers and text, shaped like an Aim brief. Not real news, not from Aim.",
+  "recap": {
+    "id": "rcp_synthOrbital01",
+    "period_start": "2030-03-02",
+    "period_end": "2030-03-09",
+    "doc": {
+      "subject": "Vela Freight books three cargo returns; Korsa Launch slips again",
+      "verdict": "Return cargo is becoming a product line. Korsa Launch lost another month. Buyers are pricing reliability above cost.",
+      "currents": [
+        {
+          "label": "Return cargo becomes a product",
+          "line": "Vela Freight booked three paid cargo returns for 2031.",
+          "status": "new",
+          "since": "2030-03-02",
+          "since_label": "this week",
+          "cited_signal_ids": ["sig_synthA1"]
+        },
+        {
+          "label": "Korsa Launch keeps slipping",
+          "line": "Korsa Launch moved its first flight for the third time.",
+          "status": "updated",
+          "since": "2030-02-16",
+          "since_label": "three weeks",
+          "cited_signal_ids": ["sig_synthA2"]
+        },
+        {
+          "label": "Insurers rewrite launch cover",
+          "line": "Two underwriters added reliability clauses to launch cover.",
+          "status": "carried over",
+          "since": "2030-02-23",
+          "since_label": "two weeks",
+          "cited_signal_ids": ["sig_synthA3"]
+        }
+      ],
+      "items": [
+        {
+          "tier": "detail",
+          "headline": "Vela Freight booked three cargo returns worth $48 million.",
+          "paragraphs": [
+            "Vela Freight signed three return missions with Mirelle Orbital, its first paid bookings for capsules that come back to Earth.",
+            "The contracts start in 2031 and include an option for two more flights if the first return lands on schedule."
+          ],
+          "means": "Return cargo now has paying customers, so capacity that can fly and land on time is worth more in negotiations.",
+          "status": "new",
+          "date": "2030-03-04",
+          "current": "Return cargo becomes a product",
+          "scope_id": "scp_synthLaunch",
+          "cited_update_ids": ["upd_synthA01", "upd_synthA02"],
+          "cited_signal_ids": ["sig_synthA1"],
+          "read_update_ids": ["upd_synthA01"],
+          "figure": {
+            "scope": "current",
+            "fresh_update_ids": ["upd_synthA01"],
+            "block": {
+              "t": "timeline",
+              "head": "How Vela Freight went from test capsule to paid returns",
+              "lead": "Four public steps in six weeks.",
+              "points": [
+                { "date": "2030-01-20", "text": "Vela Freight flew its first test capsule.", "update_id": "upd_synthA03" },
+                { "date": "2030-02-05", "text": "The capsule landed within the target zone.", "update_id": "upd_synthA04" },
+                { "date": "2030-02-21", "text": "Mirelle Orbital said it was in talks for return flights.", "update_id": "upd_synthA05" },
+                { "date": "2030-03-04", "text": "Vela Freight announced three paid returns.", "update_id": "upd_synthA01" }
+              ]
+            }
+          }
+        },
+        {
+          "tier": "brief",
+          "headline": "Korsa Launch moved its first flight to June.",
+          "paragraphs": [
+            "Korsa Launch said engine tests need another month, the third delay this year, and kept its customer list unchanged."
+          ],
+          "means": null,
+          "status": "updated",
+          "date": "2030-03-05",
+          "current": "Korsa Launch keeps slipping",
+          "scope_id": null,
+          "cited_update_ids": ["upd_synthA06"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": {
+            "scope": "item",
+            "fresh_update_ids": ["upd_synthA06"],
+            "block": {
+              "t": "chart",
+              "chart_type": "bar",
+              "head": "Korsa Launch's first flight keeps moving right",
+              "title": "Months of delay per announcement (as stated)",
+              "unit": "months",
+              "lead": null,
+              "foot": null,
+              "max_value": null,
+              "data": [
+                { "label": "First delay", "value": 2, "key": "d1", "highlight": false, "note": null },
+                { "label": "Second delay", "value": 3, "key": "d2", "highlight": false, "note": "2029" },
+                { "label": "Third delay", "value": 1, "key": "d3", "highlight": true, "note": null }
+              ]
+            }
+          }
+        },
+        {
+          "tier": "detail",
+          "headline": "Two underwriters added reliability clauses to launch cover.",
+          "paragraphs": [
+            "Quorn Mutual and Tessaly Re now price launch cover by the provider's last ten flights instead of a flat rate.",
+            "Providers with fewer than ten flights pay a surcharge until they build a record."
+          ],
+          "means": "A short flight record now costs money directly, so new providers should budget for higher cover in their first year.",
+          "status": "updated",
+          "date": "2030-03-06",
+          "current": "Insurers rewrite launch cover",
+          "scope_id": "scp_synthInsure",
+          "cited_update_ids": ["upd_synthA07"],
+          "cited_signal_ids": ["sig_synthA3"],
+          "read_update_ids": ["upd_synthA07"],
+          "figure": {
+            "scope": "item",
+            "fresh_update_ids": ["upd_synthA07"],
+            "block": {
+              "t": "table",
+              "head": "Who changed what in launch cover",
+              "title": "Clause changes (as stated)",
+              "lead": null,
+              "cols": ["Underwriter", "Flight record clause", "New provider surcharge", "Premium change"],
+              "rows": [
+                { "cells": [{ "text": "Quorn Mutual" }, { "text": "✓" }, { "text": "✓" }, { "text": "+12%" }] },
+                { "cells": [{ "text": "Tessaly Re" }, { "text": "✓" }, { "text": "" }, { "text": "+8%" }] }
+              ]
+            }
+          }
+        },
+        {
+          "tier": "brief",
+          "headline": "Mirelle Orbital switched its ground network to Sorell Relay.",
+          "paragraphs": [
+            "Mirelle Orbital moved station passes from its own dishes to Sorell Relay and said contact time per orbit doubled."
+          ],
+          "means": null,
+          "status": "new",
+          "date": "2030-03-03",
+          "current": null,
+          "scope_id": "scp_synthLaunch",
+          "cited_update_ids": ["upd_synthA08"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": {
+            "scope": "item",
+            "fresh_update_ids": ["upd_synthA08"],
+            "block": {
+              "t": "comparison",
+              "shape": "themus",
+              "head": "Mirelle Orbital's ground network, before and after",
+              "lead": "Own dishes against a shared relay.",
+              "them": { "name": "Own dishes (before)", "points": [{ "text": "Four stations." }, { "text": "Gaps over the Pacific." }] },
+              "us": { "name": "Sorell Relay (now)", "points": [{ "text": "Contact time per orbit doubled." }, { "text": "No new hardware on the spacecraft." }] }
+            }
+          }
+        },
+        {
+          "tier": "one_liner",
+          "headline": "Tessaly Space raised $22 million for a second test stand.",
+          "paragraphs": ["Tessaly Space raised $22 million for a second test stand."],
+          "means": null,
+          "status": "new",
+          "date": "2030-03-04",
+          "current": null,
+          "scope_id": "scp_synthLaunch",
+          "cited_update_ids": ["upd_synthA09"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": null
+        },
+        {
+          "tier": "one_liner",
+          "headline": "Korsa Launch moved its vehicle to Pad 7 for fit checks.",
+          "paragraphs": ["Korsa Launch moved its vehicle to Pad 7 for fit checks."],
+          "means": null,
+          "status": "new",
+          "date": "2030-03-07",
+          "current": "Korsa Launch keeps slipping",
+          "scope_id": null,
+          "cited_update_ids": ["upd_synthA10"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": null
+        },
+        {
+          "tier": "one_liner",
+          "headline": "Quorn Dynamics hired a new chief engineer from Vela Freight.",
+          "paragraphs": ["Quorn Dynamics hired a new chief engineer from Vela Freight."],
+          "means": null,
+          "status": "new",
+          "date": "2030-03-08",
+          "current": null,
+          "scope_id": "scp_synthPeople",
+          "cited_update_ids": ["upd_synthA11"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": null
+        }
+      ]
+    }
+  },
+  "citations": [
+    { "id": "upd_synthA01", "title": "Vela Freight books three cargo returns", "subtitle": "with an option for two more", "date": "2030-03-04", "sourceCount": 3, "severityLevel": "orange" },
+    { "id": "upd_synthA07", "title": "Underwriters add flight record clauses", "subtitle": null, "date": "2030-03-06", "sourceCount": 2, "severityLevel": "green" }
+  ],
+  "scopes": [
+    { "id": "scp_synthLaunch", "name": "Launch market" },
+    { "id": "scp_synthInsure", "name": "Insurance" },
+    { "id": "scp_synthPeople", "name": "Who moved where?" }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "_synthetic": "SYNTHETIC TEST DATA. Invented companies, numbers and text, shaped like an Aim brief. Not real news, not from Aim.",
+  "recap": {
+    "id": "rcp_synthFintech01",
+    "period_start": "2030-03-02",
+    "period_end": "2030-03-09",
+    "doc": {
+      "subject": "",
+      "verdict": "Small lenders are buying fraud checks instead of building them. Pricing pressure moved to the payment rails.",
+      "currents": [
+        {
+          "label": "Fraud checks become a bought service",
+          "line": "Three lenders replaced in-house checks with Brava Shield.",
+          "status": "new",
+          "since": "2030-03-02",
+          "since_label": "this week",
+          "cited_signal_ids": ["sig_synthB1"]
+        },
+        {
+          "label": "Rail fees under pressure",
+          "line": "Nolle Pay cut transfer fees for small merchants.",
+          "status": "updated",
+          "since": "2030-02-09",
+          "since_label": "four weeks",
+          "cited_signal_ids": []
+        }
+      ],
+      "items": [
+        {
+          "tier": "detail",
+          "headline": "Three lenders replaced in-house fraud checks with Brava Shield.",
+          "paragraphs": [
+            "Corvin Bank, Ostra Credit and Pell Finance said they moved fraud screening to Brava Shield to cut review time.",
+            "None of the three disclosed what they pay."
+          ],
+          "means": "Fraud checks are turning into a bought service, so a lender's edge moves to underwriting and service.",
+          "status": "new",
+          "date": "2030-03-05",
+          "current": "Fraud checks become a bought service",
+          "scope_id": "scp_synthQ1",
+          "cited_update_ids": ["upd_synthB01"],
+          "cited_signal_ids": ["sig_synthB1"],
+          "read_update_ids": ["upd_synthB01"],
+          "figure": null
+        },
+        {
+          "tier": "brief",
+          "headline": "Nolle Pay cut transfer fees by 30% for small merchants.",
+          "paragraphs": ["Nolle Pay lowered its fee for merchants under a set monthly volume and kept large-merchant pricing unchanged."],
+          "means": null,
+          "status": "updated",
+          "date": "2030-03-06",
+          "current": "Rail fees under pressure",
+          "scope_id": "scp_synthQ2",
+          "cited_update_ids": ["upd_synthB02"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": null
+        },
+        {
+          "tier": "one_liner",
+          "headline": "Ostra Credit opened an office in a second city.",
+          "paragraphs": ["Ostra Credit opened an office in a second city."],
+          "means": null,
+          "status": "new",
+          "date": "2030-03-04",
+          "current": null,
+          "scope_id": null,
+          "cited_update_ids": ["upd_synthB03"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": null
+        },
+        {
+          "tier": "one_liner",
+          "headline": "Brava Shield said 100+ lenders now use its checks.",
+          "paragraphs": ["Brava Shield said 100+ lenders now use its checks."],
+          "means": null,
+          "status": "new",
+          "date": "2030-03-07",
+          "current": "Fraud checks become a bought service",
+          "scope_id": "scp_synthQ1",
+          "cited_update_ids": ["upd_synthB04"],
+          "cited_signal_ids": [],
+          "read_update_ids": [],
+          "figure": null
+        }
+      ]
+    }
+  },
+  "citations": [
+    { "id": "upd_synthB01", "title": "Lenders move fraud screening to Brava Shield", "subtitle": null, "date": "2030-03-05", "sourceCount": 2, "severityLevel": "green" }
+  ],
+  "scopes": [
+    { "id": "scp_synthQ1", "name": "Who is buying instead of building?" },
+    { "id": "scp_synthQ2", "name": "Where are fees moving?" }
+  ]
+}

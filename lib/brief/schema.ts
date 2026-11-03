@@ -124,13 +124,14 @@ export type UnknownBlock = z.infer<typeof UnknownBlock>
 export type FigureBlock = z.infer<typeof FigureBlock>
 
 // Company tags, one file per brief: data/briefs/<slug>.tags.json.
-// index = position in the raw recap.doc.items. Ignored when recap_id differs.
+// index = position in the raw recap.doc.items. headline_hash = headlineHash() of
+// that item's headline, so the file holds no brief text. Ignored when recap_id differs.
 export const TagsFile = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   recap_id: z.string(),
   source: z.string(),
   method: z.string(),
-  items: z.array(z.object({ index: z.number().int(), headline: z.string(), companies: z.array(z.string()) })),
+  items: z.array(z.object({ index: z.number().int(), headline_hash: z.string(), companies: z.array(z.string()) })),
 })
 export type TagsFile = z.infer<typeof TagsFile>
 

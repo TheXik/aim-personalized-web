@@ -17,7 +17,7 @@ import { clearSetting, settingChips } from "./setting-chips"
 import { ReadingProvider, useMedia } from "./ui-state"
 
 type Sheet = "dock" | "half" | "full"
-type Load = { state: "loading" } | { state: "error" } | { state: "ready"; brief: Brief }
+type Load = { state: "loading" } | { state: "error" } | { state: "missing"; message: string } | { state: "ready"; brief: Brief }
 
 const CHAT_TIMEOUT_MS = 15_000
 
@@ -52,9 +52,19 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
   useEffect(() => {
     let alive = true
     fetch(`/api/briefs/${reader}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(async (r) => {
+        if (r.ok) return r.json()
+        // Aim's brief files are not in the repository. Say how to add them.
+        const body = await r.json().catch(() => null)
+        if (body?.error === "missing_brief") return { missing: String(body.message) }
+        throw new Error(String(r.status))
+      })
       .then((raw) => {
         if (!alive) return
+        if (raw && typeof raw === "object" && "missing" in raw) {
+          setLoad({ state: "missing", message: String(raw.missing) })
+          return
+        }
         setSpec(readStoredSpec(reader))
         setLoad({ state: "ready", brief: normalizeBrief(raw, tags) })
       })
@@ -168,7 +178,13 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
   if (load.state !== "ready" || !view || !brief) {
     return (
       <Frame wide={wide} chatOpen={false} sheet="dock" readerName={readerName}>
-        {load.state === "error" ? (
+        {load.state === "missing" ? (
+          <div className="reading__inner">
+            <p className="mast__week">Your market</p>
+            <p className="mast__verdict">No brief installed yet.</p>
+            <p className="item__p">{load.message}</p>
+          </div>
+        ) : load.state === "error" ? (
           <div className="reading__inner">
             <p className="mast__week">Your market</p>
             <p className="mast__verdict">This week&apos;s brief did not load.</p>

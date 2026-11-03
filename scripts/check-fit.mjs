@@ -176,13 +176,15 @@ async function main() {
       const front = m.regions.find((r) => r.name === "front page")
       const columnScroll = c.chat && front && front.overflow > 1 ? front.overflow : 0
       const bad = m.regions.filter((r) => (r.overflow > 1 && !(c.chat && r.name === "front page")) || r.overflowX > 1)
-      const ok = m.pageOverflow <= 1 && bad.length === 0
+      // Negative spare means content runs into the bottom padding: closer to clipping than designed.
+      const tight = !c.chat && m.spare !== null && m.spare < 0
+      const ok = m.pageOverflow <= 1 && bad.length === 0 && !tight
       if (!ok) failed++
       const detail = ok
         ? columnScroll
           ? `page fits, front column scrolls ${columnScroll}px while the chat is open`
           : `fits, ${m.spare}px to spare`
-        : `page overflow ${m.pageOverflow}px${bad.map((r) => `, ${r.name} overflows ${Math.max(r.overflow, r.overflowX)}px`).join("")}`
+        : `page overflow ${m.pageOverflow}px${bad.map((r) => `, ${r.name} overflows ${Math.max(r.overflow, r.overflowX)}px`).join("")}${tight ? `, content runs ${-m.spare}px into the bottom padding` : ""}`
       console.log(`${ok ? "ok  " : "FAIL"} ${label} ${detail}`)
     }
     await evaluate(send, sessionId, `localStorage.clear(), true`)

@@ -412,3 +412,8 @@
 }
 .vc .chip__meta { white-space: nowrap; line-height: 18px; }
 .vc .chip__x { flex: none; margin-top: -1px; }
+
+/* Thread card status line stays on one line ("Updated this week" and "running three weeks"). */
+.card__meta { flex-wrap: nowrap; white-space: nowrap; font-size: 10.5px; min-width: 0; }
+.card__status { flex: none; }
+.card__age { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

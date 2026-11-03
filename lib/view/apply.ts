@@ -23,6 +23,7 @@ export type RejectReason =
   | { kind: "unknown_id"; id: string }
   | { kind: "label_not_allowed"; text: string }
   | { kind: "matches_nothing" }
+  | { kind: "unclear" }
   | { kind: "not_reader_words"; text: string }
 
 export type Rejection = { op: ApplicableOp; reasons: RejectReason[] }
@@ -51,6 +52,14 @@ export const looksLikeClaim = (text: string) => {
 // Invisible formatting characters (bidi overrides, zero-width) can make a label
 // display differently from what was checked. Strip them from reader text.
 export const stripInvisible = (text: string) => text.replace(/\p{Cf}/gu, "")
+
+// The "Other" area (items with no monitoring area) is easy to hit by accident:
+// "other stories" means "the rest", not that area. Only when the reader names it.
+const namesOtherArea = (r: Rule): boolean =>
+  ((r.op === "eq" || r.op === "in") && r.field === "scope" && (r.op === "eq" ? [r.value] : r.values).some((v) => fold(v) === "other")) ||
+  ((r.op === "and" || r.op === "or") && r.args.some(namesOtherArea)) ||
+  (r.op === "not" && namesOtherArea(r.arg))
+const saysOtherArea = (request: string) => /\bother\s+(area|areas|scope|section|group|category)\b|["“'‘]other["”'’]/i.test(request)
 
 const sameRule = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
@@ -82,10 +91,9 @@ function applyOne(spec: ViewSpec, op: ApplicableOp, ctx: ApplyContext, changes: 
       if (problems.length) return { spec, reasons: problems }
       if (spec.filters.some((f) => f.mode === op.mode && sameRule(f.where, op.where))) return { spec, reasons: [] }
       if (spec.filters.length >= SPEC_LIMITS.filters) return { spec, reasons: [{ kind: "limit", what: "filters" }] }
-      // "Only X, this week" where nothing this week is X would just empty the page.
-      if (op.mode === "keep" && op.duration === "this_week" && !ctx.brief.items.some((i) => matches(op.where, i))) {
-        return { spec, reasons: [{ kind: "matches_nothing" }] }
-      }
+      // Never apply a change that changes nothing ("Hiding Other, 0 hidden").
+      if (!ctx.brief.items.some((i) => matches(op.where, i))) return { spec, reasons: [{ kind: "matches_nothing" }] }
+      if (namesOtherArea(op.where) && !saysOtherArea(ctx.request)) return { spec, reasons: [{ kind: "unclear" }] }
       const filter: Filter = { id: nextId("f", ids), mode: op.mode, where: op.where, expires: expires(op.duration) }
       changes.push({ kind: "filter_added", filter })
       return { spec: { ...spec, filters: [...spec.filters, filter] }, reasons: [] }
@@ -97,6 +105,8 @@ function applyOne(spec: ViewSpec, op: ApplicableOp, ctx: ApplyContext, changes: 
       if (problem) problems.push(problem)
       if (problems.length) return { spec, reasons: problems }
       if (spec.pins.some((p) => p.to === op.to && sameRule(p.where, op.where))) return { spec, reasons: [] }
+      if (!ctx.brief.items.some((i) => matches(op.where, i))) return { spec, reasons: [{ kind: "matches_nothing" }] }
+      if (namesOtherArea(op.where) && !saysOtherArea(ctx.request)) return { spec, reasons: [{ kind: "unclear" }] }
       if (spec.pins.length >= SPEC_LIMITS.pins) return { spec, reasons: [{ kind: "limit", what: "pins" }] }
       const pin: Pin = { id: nextId("p", ids), where: op.where, to: op.to, label, expires: expires(op.duration) }
       changes.push({ kind: "pin_added", pin })

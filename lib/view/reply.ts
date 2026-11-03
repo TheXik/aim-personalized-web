@@ -1,4 +1,4 @@
-import type { Brief } from "../brief/types"
+import type { Brief, Item } from "../brief/types"
 import type { ApplyResult, Change, RejectReason } from "./apply"
 import { substitutionNote } from "../chat/substitution"
 import { applyOps } from "./apply"
@@ -41,10 +41,16 @@ const NOT_SUPPORTED_COPY: Record<NotSupportedReason, string> = {
   other: "That's not something this page can do yet. It can show only some stories, put some first or last, group by company, thread or area, sort by newest or by numbers, and hide parts of each story.",
 }
 
-function headlines(hs: string[], max = 3): string {
-  const shown = hs.slice(0, max).map((h) => h.replace(/\.$/, ""))
-  return shown.join(". ") + (hs.length > max ? `, and ${hs.length - max} more` : "")
+// Replies stay short: a count plus at most three short names (companies), never
+// full headlines. The page itself shows the stories.
+function shortNames(items: Item[], max = 3): string {
+  const names = [...new Set(items.map((i) => i.primaryCompany).filter((n): n is string => !!n))]
+  if (names.length === 0) return ""
+  const head = names.slice(0, max)
+  const more = names.length - head.length
+  return ` (${head.join(", ")}${more > 0 ? ` and ${more} more` : ""})`
 }
+const count = (n: number) => `${n} ${n === 1 ? "item" : "items"}`
 
 export function describeOp(op: ApplicableOp): string {
   switch (op.op) {
@@ -86,6 +92,8 @@ function rejectionLine(r: RejectReason): string {
       return "I couldn't find that setting."
     case "matches_nothing":
       return "Nothing in this week's brief matches that, so I left the page as it was."
+    case "unclear":
+      return "I wasn't sure which stories you meant by “other”, so I left that part out."
     case "label_not_allowed":
     case "not_reader_words":
       return "I can only name sections with words from the brief or your own message."
@@ -97,20 +105,16 @@ function changeLine(c: Change, after: ReturnType<typeof buildView>): string {
     case "filter_added": {
       const d = after.directives.find((x) => x.id === c.filter.id)!
       const when = c.filter.expires ? " Just for this week's brief." : ""
-      if (c.filter.mode === "keep") {
-        return d.matched === 0
-          ? `${filterSummary(c.filter)}: nothing matches this week.${when}`
-          : `${filterSummary(c.filter)}. Showing ${d.matched}: ${headlines(d.matchedHeadlines)}.${when}`
-      }
-      return `${filterSummary(c.filter)}, ${d.hidden} hidden.${when}`
+      if (c.filter.mode === "keep") return `${filterSummary(c.filter)}: ${after.shownTotal} of ${after.shownTotal + after.hiddenTotal} shown.${when}`
+      return `${filterSummary(c.filter)}: ${d.hidden} hidden.${when}`
     }
     case "pin_added": {
       const d = after.directives.find((x) => x.id === c.pin.id)!
       if (d.matched === 0) return `${pinSummary(c.pin)}: nothing matches this week.`
       // Count only what the reader can see: a filter may hide the pinned items.
-      const shown = after.sections.filter((s) => s.key.endsWith(`:${c.pin.id}`)).flatMap((s) => s.items.map((i) => i.headline))
+      const shown = after.sections.filter((s) => s.key.endsWith(`:${c.pin.id}`)).flatMap((s) => s.items)
       if (shown.length === 0) return `${pinSummary(c.pin)}: those items are hidden by another setting.`
-      return `${pinSummary(c.pin)}: ${headlines(shown)}.`
+      return `${pinSummary(c.pin)}: ${count(shown.length)}${shortNames(shown)}.`
     }
     case "removed":
       return `Removed “${"mode" in c.what ? filterSummary(c.what) : pinSummary(c.what)}”.`
@@ -150,11 +154,8 @@ export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult
     if (after.shownTotal === 0) {
       lines.push("Nothing is left with these settings, so the full brief shows below.")
     } else if (after.hiddenTotal > total / 2) {
-      // Skip the total when one hide filter already said the same number.
-      const added = result.changes.filter((c) => c.kind === "filter_added")
-      const onlyHide = added.length === 1 && added[0].kind === "filter_added" && added[0].filter.mode === "hide"
-      const alreadySaid = onlyHide && after.directives.find((d) => added[0].kind === "filter_added" && d.id === added[0].filter.id)?.hidden === after.hiddenTotal
-      if (!alreadySaid) lines.push(`This hides ${after.hiddenTotal} of ${total} items.`)
+      // One count per reply: the change line already says how many show.
+      // When "only new" hides most of the page, offer the wider reading.
       const newOnly = result.changes.find((c) => c.kind === "filter_added" && c.filter.mode === "keep" && isStatusNew(c.filter.where))
       if (newOnly && newOnly.kind === "filter_added" && !offer) {
         offer = {

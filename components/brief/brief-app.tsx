@@ -9,9 +9,8 @@ import type { PageView } from "@/lib/view/model"
 import { DEFAULT_SPEC, parseStoredSpec, specStorageKey, type ViewSpec } from "@/lib/view/spec"
 import { applyOps } from "@/lib/view/apply"
 import { composeReply, type Offer } from "@/lib/view/reply"
-import { askAiMarkdown, toAgentMarkdown } from "@/lib/export/agent-markdown"
+import { toAgentMarkdown } from "@/lib/export/agent-markdown"
 import { contactMailto, type ContactOffer } from "@/lib/chat/contact"
-import { writeClipboard } from "./copy-for-agent"
 import { buildFrontPage } from "@/lib/front/front-page"
 import { ChatDock, ChatPanel, type ChatStep, type ChatTurn, type Suggestion } from "@/components/chat/chat-panel"
 import { FrontPage } from "@/components/front/front-page"
@@ -45,7 +44,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const [turns, setTurns] = useState<ChatTurn[]>([])
   const [busy, setBusy] = useState(false)
   const [reading, setReading] = useState<Reading | null>(null)
-  const [sheet, setSheet] = useState<"half" | "full">("half")
+  const [sheet, setSheet] = useState<"peek" | "half" | "full">("half")
   const [chatOpen, setChatOpen] = usePersistedFlag(CHAT_OPEN_KEY, false)
   const offerRequest = useRef("")
   const declines = useRef(0)
@@ -134,12 +133,18 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
     return () => window.removeEventListener("popstate", onPop)
   }, [])
 
-  // On a phone the half sheet covers the page, so after a change close it and show the result.
-  const showChangeOnPhone = useCallback(() => {
-    if (window.matchMedia("(min-width: 1024px)").matches) return
-    setChatOpen(false)
-    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })
-  }, [setChatOpen])
+  // After a change the reader sees it without scrolling: the brief goes back to its top.
+  // On a phone the sheet shrinks to a peek with the latest reply, so it no longer covers the page.
+  const showChange = useCallback(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const behavior = reduce ? "auto" : "smooth"
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      document.querySelector(".fp")?.scrollTo({ top: 0, behavior })
+      return
+    }
+    setSheet("peek")
+    window.scrollTo({ top: 0, behavior })
+  }, [])
 
   const send = useCallback(
     async (text: string) => {
@@ -169,7 +174,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         if (!res.ok && typeof data.reply !== "string") throw new Error(String(res.status))
         if (res.ok && data.changed === true && data.spec) {
           saveSpec(parseStoredSpec(data.spec))
-          showChangeOnPhone()
+          showChange()
         }
         reply = {
           id: `${id}a`,
@@ -178,18 +183,12 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           ...splitReply(typeof data.reply === "string" ? data.reply : ""),
           offer: res.ok && data.offer && Array.isArray(data.offer.ops) ? { label: String(data.offer.label), ops: data.offer.ops } : null,
           request: text,
-          // Every refusal leaves something to click: the server's question for "Ask your own AI",
-          // or, when nothing was applied and nothing is offered, the reader's own words.
-          askAi:
-            res.ok && data.askAi && typeof data.askAi.question === "string"
-              ? { question: data.askAi.question }
-              : !(res.ok && data.changed === true) && !(res.ok && data.offer) && (!res.ok || data.source === "none")
-                ? { question: text }
-                : null,
+          // The page could not do it: the turn then offers the closest view, the examples and the direct line.
+          couldNot: !(res.ok && data.changed === true) && (!!(res.ok && data.askAi) || !res.ok || data.source === "none"),
           contact: res.ok && data.contact && (data.contact.when === "now" || data.contact.when === "after") ? data.contact : null,
         }
         // Consecutive turns the chat could not do. The server uses it to spot frustration.
-        declines.current = reply.state === "done" && reply.askAi ? declines.current + 1 : 0
+        declines.current = reply.state === "done" && reply.couldNot ? declines.current + 1 : 0
         offerRequest.current = text
       } catch (e) {
         const timedOut = e instanceof DOMException && e.name === "AbortError"
@@ -203,7 +202,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           steps: [],
           offer: null,
           request: text,
-          askAi: { question: text },
+          couldNot: true,
           contact: null,
         }
       } finally {
@@ -212,7 +211,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
       }
       setTurns((t) => t.map((x) => (x.id === reply.id ? reply : x)))
     },
-    [busy, reader, spec, saveSpec, showChangeOnPhone],
+    [busy, reader, spec, saveSpec, showChange],
   )
 
   // An offer ("did you mean...") applies in code, with no model call.
@@ -222,7 +221,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
     const r = composeReply(brief, spec, result, offerRequest.current)
     if (r.changed) {
       saveSpec(result.spec)
-      showChangeOnPhone()
+      showChange()
     }
     setTurns((t) => [
       ...t.map((x) => (x.id === turnId && x.role === "assistant" && x.state !== "pending" ? { ...x, offer: null } : x)),
@@ -234,15 +233,12 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         ...splitReply(r.text),
         offer: r.offer,
         request: offerRequest.current,
-        askAi: null,
+        couldNot: false,
         contact: null,
       },
     ])
   }
 
-  // "Ask your own AI": the whole brief in the default design with the question on top,
-  // because the answer may sit in an item the reader's settings hide.
-  const askAi = async (question: string) => (brief ? writeClipboard(askAiMarkdown(brief, question)) : false)
   // "Tell Lukáš": a prefilled mail the reader sees in full before sending. No server call.
   const contactHref = (request?: string) =>
     contactMailto({ request, page: window.location.href, settings: settings.map((c) => c.label), time: new Date().toISOString() })
@@ -284,6 +280,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const chatShown = chatOpen && !(reading && desk)
   const openChat = () => {
     if (reading && desk) closeReading()
+    setSheet("half")
     setFocusChat(desk)
     setChatOpen(true)
   }
@@ -332,7 +329,6 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           viewControls={viewControls}
           onSend={send}
           onOffer={takeOffer}
-          onAskAi={askAi}
           contactHref={contactHref}
           onClose={closeChat}
           autoFocus={focusChat && desk}

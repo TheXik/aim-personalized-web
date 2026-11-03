@@ -19,17 +19,24 @@ describe("model budget", () => {
     const b = await import("./budget")
     const worst = b.worstCaseUsd(8_000, 2_000) // about 0.0055 USD
     let sent = 0
-    while (b.reserve(worst)) sent++
+    while (await b.reserve(worst)) sent++
     expect(sent).toBe(Math.floor(0.1 / worst))
-    expect(b.spent().usd).toBeLessThanOrEqual(0.1)
+    expect((await b.spent()).usd).toBeLessThanOrEqual(0.1)
   })
 
   it("settles to the measured cost so cheap calls leave room", async () => {
     const b = await import("./budget")
     const worst = b.worstCaseUsd(8_000, 2_000)
-    expect(b.reserve(worst)).toBe(true)
-    b.settle(worst, b.costUsd({ input: 2_000, cachedInput: 0, output: 300 }))
-    expect(b.spent().usd).toBeCloseTo((2_000 * 0.25 + 300 * 2) * 1.2 / 1e6, 8)
+    expect(await b.reserve(worst)).toBe(true)
+    await b.settle(worst, b.costUsd({ input: 2_000, cachedInput: 0, output: 300 }))
+    expect((await b.spent()).usd).toBeCloseTo((2_000 * 0.25 + 300 * 2) * 1.2 / 1e6, 8)
+  })
+
+  it("fails closed on Workers without a KV binding", async () => {
+    vi.stubGlobal("navigator", { userAgent: "Cloudflare-Workers" })
+    const b = await import("./budget")
+    expect(await b.reserve(0.001)).toBe(false)
+    vi.unstubAllGlobals()
   })
 
   it("can never be raised above 20 cents", async () => {

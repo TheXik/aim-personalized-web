@@ -125,7 +125,7 @@
   font-family: var(--b-mono); font-size: 11.5px; line-height: 1.5; color: var(--b-muted);
 }
 .tk__why span { color: var(--b-meta); text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px; }
-.tk__why::after { content: ""; position: absolute; inset: 0; }
+.tk__why::after { content: ""; position: absolute; inset: 0; z-index: 2; cursor: pointer; }
 .tk__item:hover .tk__why span, .tk__why:hover span { color: var(--b-ink); text-decoration-color: var(--b-faint); }
 
 /* ---------- Threads ---------- */
@@ -177,7 +177,7 @@
 /* ---------- Figure of the week ---------- */
 
 .fp__figure { position: relative; }
-.hook { margin-top: 12px; border-radius: 12px; transition: box-shadow var(--dur-hover) var(--ease-standard); }
+.hook { margin-top: 12px; border-radius: 12px; cursor: pointer; transition: box-shadow var(--dur-hover) var(--ease-standard); }
 .fp__figure:hover .hook { box-shadow: var(--shadow-card-hover); }
 .hook .fig { margin: 0; }
 .fig--hook { padding: 16px 20px 18px; }
@@ -187,7 +187,7 @@
   font-family: var(--b-mono); font-size: 11px; color: var(--b-faint);
 }
 /* The link covers the whole section, so the figure is one click target. */
-.hook__open::after { content: ""; position: absolute; inset: 0; border-radius: 12px; }
+.hook__open::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: 12px; cursor: pointer; }
 .hook__open:focus-visible { outline: none; }
 .hook__open:focus-visible::after { outline: 2px solid var(--ring); outline-offset: 4px; }
 .fp__figure:hover .hook__open { color: var(--b-ink); }
@@ -373,3 +373,24 @@
   .fp__also .also { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .fp__figure { align-self: start; }
 }
+
+/* ---------- Scrollbars: thin, warm, and only there while you use them ---------- */
+
+.rp__scroll, .chat__scroll, .fp__also .also, .fp {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 300ms var(--ease-standard);
+}
+.rp__scroll:hover, .chat__scroll:hover, .fp__also .also:hover, .fp:hover,
+.rp__scroll:focus-within, .chat__scroll:focus-within {
+  scrollbar-color: #d6d2cf transparent;
+}
+/* Engines without scrollbar-color (older Safari): the same thin, rounded thumb. */
+@supports not (scrollbar-color: auto) {
+  .rp__scroll::-webkit-scrollbar, .chat__scroll::-webkit-scrollbar, .also::-webkit-scrollbar, .fp::-webkit-scrollbar { width: 10px; }
+  .rp__scroll::-webkit-scrollbar-thumb, .chat__scroll::-webkit-scrollbar-thumb, .also::-webkit-scrollbar-thumb, .fp::-webkit-scrollbar-thumb {
+    background: #d6d2cf; border-radius: 999px; border: 3px solid var(--background);
+  }
+  .rp__scroll::-webkit-scrollbar-track, .chat__scroll::-webkit-scrollbar-track, .also::-webkit-scrollbar-track, .fp::-webkit-scrollbar-track { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .rp__scroll, .chat__scroll, .fp__also .also, .fp { transition: none; } .rp__bar::after { transition: none; } }

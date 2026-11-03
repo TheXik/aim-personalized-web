@@ -36,6 +36,7 @@ export function ReadingPanel({
 }) {
   const heading = useRef<HTMLHeadingElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
   const storyIndex = reading.kind === "story" ? order.findIndex((i) => i.key === reading.key) : -1
   const story = storyIndex >= 0 ? order[storyIndex] : null
   const thread = reading.kind === "thread" ? (threads.find((t) => t.label === reading.label) ?? null) : null
@@ -44,8 +45,21 @@ export function ReadingPanel({
   const viewKey = reading.kind === "story" ? reading.key : reading.kind === "thread" ? `t:${reading.label}` : "more"
 
   // New content: start at the top and move focus to its heading.
+  // Reading progress: a thin line under the header fills as the reader scrolls, and a soft
+  // shadow appears only once the content moves under the header. Set as CSS variables, no re-render.
+  const onScroll = () => {
+    const el = scroller.current
+    const p = panel.current
+    if (!el || !p) return
+    const max = el.scrollHeight - el.clientHeight
+    p.style.setProperty("--rp-progress", String(max > 0 ? Math.min(el.scrollTop / max, 1) : 0))
+    p.toggleAttribute("data-scrolled", el.scrollTop > 4)
+    p.toggleAttribute("data-scrollable", max > 4)
+  }
+
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 })
+    requestAnimationFrame(onScroll)
     heading.current?.focus({ preventScroll: true })
   }, [viewKey])
 
@@ -68,7 +82,7 @@ export function ReadingPanel({
         : "More this week"
 
   return (
-    <div className="rp" role="dialog" aria-modal={modal} aria-labelledby="rp-h">
+    <div className="rp" ref={panel} role="dialog" aria-modal={modal} aria-labelledby="rp-h">
       <div className="rp__bar">
         <span className="rp__pos">{position}</span>
         <span className="rp__spacer" />
@@ -101,7 +115,7 @@ export function ReadingPanel({
         </button>
       </div>
 
-      <div className="rp__scroll" ref={scroller}>
+      <div className="rp__scroll" ref={scroller} onScroll={onScroll}>
         {story ? (
           <StoryBody story={story} parts={parts} showUpdates={showUpdates} heading={heading} threads={threads} onOpen={onOpen} />
         ) : thread ? (

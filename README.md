@@ -34,9 +34,9 @@ Set up and run the Aim personalised brief prototype on this machine, then show i
 6. Run `pnpm test`. It makes no model calls. No test should fail. Without the briefs, the tests that need them are skipped.
 7. Start the app in the background with `pnpm dev --port 3737` and wait until http://localhost:3737 answers. Keep it running.
 8. Check that each brief loads: `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3737/api/briefs/<reader>` for `space-launch`, `enterprise-ai` and `cz-sk-ai` should print 200 (404 means the brief files are missing). The pages themselves always return 200 because they load the brief in the browser. Then open all three pages in my browser (on macOS: `open <url>`):
-   http://localhost:3737/r/space-launch
-   http://localhost:3737/r/enterprise-ai
-   http://localhost:3737/r/cz-sk-ai
+   http://localhost:3737/brief/space-launch
+   http://localhost:3737/brief/enterprise-ai
+   http://localhost:3737/brief/cz-sk-ai
 9. Try the chat once from the command line:
    curl -s -X POST http://localhost:3737/api/chat -H 'content-type: application/json' -d '{"reader":"space-launch","request":"hide the one-liners","spec":null}'
    With the briefs in place, the JSON answer should have "changed": true. "source" is "offline" without a key and "model" with one.
@@ -70,9 +70,9 @@ To turn on the live chat, put your key after `AZURE_OPENAI_API_KEY=` in `.env.lo
 
 | Page | Brief | Reader |
 |---|---|---|
-| `/r/space-launch` | `data/briefs/brief-space-launch.json` | A European launch provider |
-| `/r/enterprise-ai` | `data/briefs/brief-enterprise-ai.json` | A San Francisco enterprise-AI founder raising a round |
-| `/r/cz-sk-ai` | `data/briefs/brief-cz-sk-ai.json` | A Czech or Slovak AI founder |
+| `/brief/space-launch` | `data/briefs/brief-space-launch.json` | A European launch provider |
+| `/brief/enterprise-ai` | `data/briefs/brief-enterprise-ai.json` | A San Francisco enterprise-AI founder raising a round |
+| `/brief/cz-sk-ai` | `data/briefs/brief-cz-sk-ai.json` | A Czech or Slovak AI founder |
 
 The page loads its brief through `GET /api/briefs/<reader>`, which returns the file unchanged with about 300 ms of simulated latency, as if it came from Aim's API. The JSON has no reader id, so the slug stands in for one reader.
 
@@ -99,7 +99,7 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 
 | Path | What it holds |
 |---|---|
-| `app/r/[reader]/` | The reader page |
+| `app/brief/[reader]/` | The reader page |
 | `app/api/briefs/[reader]/` | The brief endpoint |
 | `app/api/chat/` | The chat route and its rate limits |
 | `components/` | The brief, figures and chat UI |

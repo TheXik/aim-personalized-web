@@ -15,14 +15,15 @@ check() {
 }
 
 check 307 "$(code "$url/")" "home sends a stranger to sign-in"
-check 307 "$(code "$url/r/space-launch")" "reader page sends a stranger to sign-in"
-check 307 "$(code -H 'RSC: 1' "$url/r/space-launch")" "reader page RSC request sends a stranger to sign-in"
+check 308 "$(code "$url/r/space-launch")" "old /r/ link redirects permanently to /brief/"
+check 307 "$(code "$url/brief/space-launch")" "reader page sends a stranger to sign-in"
+check 307 "$(code -H 'RSC: 1' "$url/brief/space-launch")" "reader page RSC request sends a stranger to sign-in"
 check 401 "$(code "$url/api/briefs/space-launch")" "briefs API refuses a stranger"
 check 401 "$(code -H 'RSC: 1' "$url/api/briefs/space-launch")" "briefs API refuses a stranger RSC request"
 check 401 "$(code -X POST -H 'content-type: application/json' -d '{}' "$url/api/chat")" "chat API refuses a stranger"
 check 303 "$(code -c "$jar" -X POST --data-urlencode "password=$SITE_PASSWORD" "$url/api/login")" "sign in"
 for reader in space-launch enterprise-ai cz-sk-ai; do
-  check 200 "$(code -b "$jar" "$url/r/$reader")" "reader page /r/$reader"
+  check 200 "$(code -b "$jar" "$url/brief/$reader")" "reader page /brief/$reader"
   check 200 "$(code -b "$jar" "$url/api/briefs/$reader")" "briefs API $reader"
 done
 

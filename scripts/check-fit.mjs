@@ -149,7 +149,7 @@ async function main() {
     await send("Runtime.enable", {}, sessionId)
     for (const c of CASES) {
       await send("Emulation.setDeviceMetricsOverride", { width: c.w, height: c.h, deviceScaleFactor: 1, mobile: false }, sessionId)
-      const url = `${BASE}/r/${c.reader}`
+      const url = `${BASE}/brief/${c.reader}`
       await send("Page.navigate", { url }, sessionId)
       await waitFor(send, sessionId, `document.readyState === "complete"`)
       const spec = VIEWS[c.view]

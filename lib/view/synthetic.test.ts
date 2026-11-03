@@ -302,3 +302,14 @@ describe("offline mode by config", () => {
     expect(matchOffline("show the threads again")?.[0]).toMatchObject({ op: "sections", currents: true })
   })
 })
+
+describe("persona finding: hidden threads leave the front page", () => {
+  it("hiding a thread's stories removes its thread card, and 'hide the threads' removes them all", async () => {
+    const { buildFrontPage } = await import("@/lib/front/front-page")
+    const label = orbital.currents[1].label
+    const hidden = buildFrontPage(buildView(orbital, withSpec({ filters: [hide({ op: "eq", field: "current", value: label })] })))
+    expect(hidden.threads.map((t) => t.label)).not.toContain(label)
+    const none = buildFrontPage(buildView(orbital, withSpec({ sections: { currents: false, updates: true } })))
+    expect(none.threads).toHaveLength(0)
+  })
+})

@@ -53,6 +53,13 @@ describe("model budget", () => {
     vi.unstubAllGlobals()
   })
 
+  it("records a call that cost more than its reservation", async () => {
+    const b = await import("./budget")
+    const r = await b.reserve(0.002)
+    await b.settle(r!, 0.003)
+    expect((await b.spent()).usd).toBeCloseTo(0.003, 10)
+  })
+
   it("can never be raised above 20 cents", async () => {
     process.env.MODEL_BUDGET_USD = "5"
     const b = await import("./budget")

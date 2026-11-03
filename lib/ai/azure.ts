@@ -122,7 +122,7 @@ export async function callStructured<T>({
   }
 
   // Hard spend cap (lib/ai/budget.ts). A call that could cross it is never sent.
-  const worstCase = worstCaseUsd(system.length + prompt.length, maxOutputTokens);
+  const worstCase = worstCaseUsd(new TextEncoder().encode(system + prompt).length, maxOutputTokens);
   const reservation = await reserve(worstCase);
   if (!reservation) {
     const ms = Math.round(performance.now() - t0);
@@ -139,7 +139,8 @@ export async function callStructured<T>({
       output: Output.object({ schema }),
       providerOptions: modelOptions(effort),
       maxOutputTokens,
-      maxRetries: 1,
+      // One attempt only, so the measured usage is the whole cost of the call.
+      maxRetries: 0,
       abortSignal: signal,
     });
     const ms = Math.round(performance.now() - t0);

@@ -117,9 +117,11 @@ function fileStore(): Store {
 const store = async (): Promise<Store | null> => (onWorkers() ? cloudflareStore() : fileStore())
 const today = () => new Date().toISOString().slice(0, 10)
 
-// About 3.5 characters per token for English JSON, rounded up.
-export function worstCaseUsd(promptChars: number, maxOutputTokens: number): number {
-  return Math.ceil(promptChars / 3.5) * PRICE.input + maxOutputTokens * PRICE.output
+// A true upper bound: a token covers at least one UTF-8 byte, so input tokens
+// never exceed the prompt's byte length. Output is capped by maxOutputTokens.
+// The caller sends one attempt only (no hidden SDK retries), so no multiplier.
+export function worstCaseUsd(promptBytes: number, maxOutputTokens: number): number {
+  return promptBytes * PRICE.input + maxOutputTokens * PRICE.output
 }
 
 export function costUsd(u: { input: number; cachedInput: number; output: number }): number {
@@ -139,9 +141,11 @@ export async function reserve(worstCase: number): Promise<Reservation | null> {
   return (await s.reserve(day, worstCase, capUsd())) ? { day, usd: worstCase } : null
 }
 
-// Correct the reservation to the measured cost. Unknown usage keeps the worst case.
+// Correct the reservation to the measured cost, down or up. Unknown usage keeps
+// the worst case. An upward correction can take the total past the cap once,
+// and then reserve() refuses every further call that day.
 export async function settle(r: Reservation, actual: number | null): Promise<void> {
-  if (actual === null || actual >= r.usd) return
+  if (actual === null || actual === r.usd) return
   const s = await store()
   if (s) await s.adjust(r.day, actual - r.usd)
 }

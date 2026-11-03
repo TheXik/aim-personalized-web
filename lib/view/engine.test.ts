@@ -49,7 +49,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
     })
 
     it("ignores a tags file from another week", () => {
-      const t = { ...tags("space-launch"), recap_id: "rcp_other" }
+      const t = { ...tags("space-launch"), recap_hash: "00000000000000" }
       expect(normalizeBrief(raw("space-launch"), t).hasTags).toBe(false)
     })
 

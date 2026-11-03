@@ -105,7 +105,7 @@ export function normalizeBrief(input: unknown, tagsInput?: TagsFile | null): Bri
   const { recap } = raw
   const doc = recap.doc
 
-  const tags = tagsInput && tagsInput.recap_id === recap.id ? tagsInput : null
+  const tags = tagsInput && tagsInput.recap_hash === headlineHash(recap.id) ? tagsInput : null
   const tagsByIndex = new Map<number, string[]>()
   if (tags) {
     for (const t of tags.items) {

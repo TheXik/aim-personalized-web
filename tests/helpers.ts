@@ -52,7 +52,10 @@ export function loadBrief(slug: Slug): Brief {
 // Item indices across all sections, in display order.
 export const flatOrder = (view: PageView) => view.sections.flatMap((s) => s.items.map((i) => i.index))
 
-export const render = (slug: Slug, spec: ViewSpec) => buildView(loadBrief(slug), spec)
+export const render = (slug: Slug, spec: ViewSpec) => {
+  const brief = loadBrief(slug)
+  return buildView(brief, resolveSpec(spec, brief))
+}
 
 // Every rule a spec carries, for the literal check.
 export const rulesOf = (spec: ViewSpec): Rule[] => [...spec.filters.map((f) => f.where), ...spec.pins.map((p) => p.where)]
@@ -118,10 +121,12 @@ export function nextWeekSynthetic(raw: ReturnType<typeof rawBrief>) {
 }
 
 // Fixtures say "$current:N" or "$scope:N" instead of quoting a thread label or a
-// scope name. This swaps in the brief's own text at test time.
+// scope name, and "$recap" instead of the recap id. This swaps in the brief's own
+// values at test time.
 export function resolveSpec(spec: ViewSpec, brief: Brief): ViewSpec {
   const swap = (v: unknown): unknown => {
     if (typeof v === "string") {
+      if (v === "$recap") return brief.recapId
       const m = /^\$(current|scope):(\d+)$/.exec(v)
       if (!m) return v
       const n = Number(m[2])

@@ -64,8 +64,11 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
       expect(e).toContain("| Dataiku | No | Yes | No | No |")
       expect(e).toMatch(/- Sep 27: /)
       const c = md(czsk)
-      expect(c).toContain("Claude-based agents (before):")
-      expect(c).toContain("Jev decision model (now):")
+      // Side names read from the brief, so no brief label is copied into this file.
+      const cmp = czsk.items.map((i) => i.figure).find((f) => f?.type === "comparison")
+      if (cmp?.type !== "comparison") throw new Error("CZ and SK brief has no comparison figure")
+      expect(c).toContain(`${cmp.block.them.name}:`)
+      expect(c).toContain(`${cmp.block.us.name}:`)
     })
 
     it("leaves out what the reader's filters hide and says how much is hidden", () => {

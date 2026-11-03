@@ -96,7 +96,7 @@ describe.runIf(HAS_BRIEFS)("research 06 fixtures: follow-ups", () => {
   it("IN14 drops Bessemer for this week only", () => {
     const f = fixtures.find((x) => x.id === "IN14")!
     const brief = loadBrief("enterprise-ai")
-    const drop = f.spec!.filters.find((x) => x.id === "f2")!
+    const drop = resolveSpec(f.spec!, brief).filters.find((x) => x.id === "f2")!
     expect(drop.expires).toBe(brief.recapId)
     const view = render("enterprise-ai", f.spec!)
     expect(view.directives.find((d) => d.id === "f2")).toMatchObject({ state: "active", hidden: 1 })

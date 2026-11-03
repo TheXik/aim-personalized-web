@@ -20,7 +20,7 @@ import { ReadingPanel, type Reading } from "@/components/reader/reading-panel"
 import { clearSetting, settingChips } from "./setting-chips"
 import { useMedia } from "./ui-state"
 
-type Load = { state: "loading" } | { state: "error" } | { state: "ready"; brief: Brief }
+type Load = { state: "loading" } | { state: "error" } | { state: "missing"; message: string } | { state: "ready"; brief: Brief }
 
 const CHAT_TIMEOUT_MS = 15_000
 
@@ -55,9 +55,19 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   useEffect(() => {
     let alive = true
     fetch(`/api/briefs/${reader}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(async (r) => {
+        if (r.ok) return r.json()
+        // Aim's brief files are not in the repository. Say how to add them.
+        const body = await r.json().catch(() => null)
+        if (body?.error === "missing_brief") return { missing: String(body.message) }
+        throw new Error(String(r.status))
+      })
       .then((raw) => {
         if (!alive) return
+        if (raw && typeof raw === "object" && "missing" in raw) {
+          setLoad({ state: "missing", message: String(raw.missing) })
+          return
+        }
         setSpec(readStoredSpec(reader))
         setLoad({ state: "ready", brief: normalizeBrief(raw, tags) })
       })
@@ -159,7 +169,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const takeOffer = (turnId: string, offer: Offer) => {
     if (!brief) return
     const result = applyOps(spec, offer.ops, { brief, request: offerRequest.current })
-    const r = composeReply(brief, spec, result)
+    const r = composeReply(brief, spec, result, offerRequest.current)
     if (r.changed) saveSpec(result.spec)
     setTurns((t) => [
       ...t.map((x) => (x.id === turnId && x.role === "assistant" && x.state !== "pending" ? { ...x, offer: null } : x)),
@@ -177,6 +187,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   if (load.state !== "ready" || !view || !brief || !fp) {
     return (
       <BriefLoading
+        missing={load.state === "missing" ? load.message : null}
         failed={load.state === "error"}
         onRetry={() => {
           setLoad({ state: "loading" })
@@ -284,15 +295,30 @@ function readStoredSpec(reader: string): ViewSpec {
 }
 
 /** The page while the brief loads, also the route's Suspense fallback. */
-export function BriefLoading({ failed = false, onRetry }: { failed?: boolean; onRetry?: () => void; readerName?: string }) {
+export function BriefLoading({
+  failed = false,
+  missing = null,
+  onRetry,
+}: {
+  failed?: boolean
+  missing?: string | null
+  onRetry?: () => void
+  readerName?: string
+}) {
   return (
     <div className="app" data-chat="closed">
       <header className="tb">
         <span className="tb__brand">Aim</span>
       </header>
       <main className="app__main">
-        <div className="fp" aria-busy={!failed}>
-          {failed ? (
+        <div className="fp" aria-busy={!failed && !missing}>
+          {missing ? (
+            <div className="fp__lead">
+              <p className="eyebrow fp__kicker">Your market brief</p>
+              <h1 className="fp__verdict">No brief installed yet.</h1>
+              <p className="fp__count">{missing}</p>
+            </div>
+          ) : failed ? (
             <div className="fp__lead">
               <p className="eyebrow fp__kicker">Your market brief</p>
               <h1 className="fp__verdict">This week&apos;s brief did not load.</h1>

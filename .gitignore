@@ -46,3 +46,14 @@ AGENTS.md
 !.env.example
 design/aim-reference/
 .model-spend.json
+
+# Aim sample briefs are not part of the repository. Copy them here to run the app.
+data/briefs/brief-*.json
+
+# Cloudflare build output
+.open-next
+.wrangler
+.dev.vars
+
+# Local decline log (production keeps it in D1)
+.declines.jsonl

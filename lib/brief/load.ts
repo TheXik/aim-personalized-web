@@ -1,18 +1,15 @@
-import { RAW_BRIEFS, RAW_TAGS } from "./data"
+import "server-only"
+import { rawBrief, rawTags } from "./data"
 import { normalizeBrief } from "./normalize"
-import { TagsFile, isReaderSlug, type ReaderSlug } from "./schema"
+import { TagsFile, isReaderSlug } from "./schema"
 import type { Brief } from "./types"
 
 // Server side. One reader's brief and company tags. A slug only ever reaches its own data.
-
-export const readRawBrief = (slug: ReaderSlug): unknown => RAW_BRIEFS[slug]
-
-export function readTags(slug: ReaderSlug): TagsFile | null {
-  const parsed = TagsFile.safeParse(RAW_TAGS[slug])
-  return parsed.success ? parsed.data : null
-}
-
+// null when the slug is unknown or the brief file is not installed.
 export async function loadBrief(slug: string): Promise<Brief | null> {
   if (!isReaderSlug(slug)) return null
-  return normalizeBrief(readRawBrief(slug), readTags(slug))
+  const raw = rawBrief(slug)
+  if (raw === null) return null
+  const tags = TagsFile.safeParse(rawTags(slug))
+  return normalizeBrief(raw, tags.success ? tags.data : null)
 }

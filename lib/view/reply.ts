@@ -1,5 +1,6 @@
 import type { Brief } from "../brief/types"
 import type { ApplyResult, Change, RejectReason } from "./apply"
+import { applyOps } from "./apply"
 import { buildView, DEFAULT_TITLES, filterSummary, pinSummary } from "./engine"
 import type { ApplicableOp, NotSupportedReason } from "./ops"
 import { describeRule } from "./rules"
@@ -65,12 +66,14 @@ export function describeOp(op: ApplicableOp): string {
   }
 }
 
+// Never quotes a literal the code rejected: it came from the model, and no
+// model-written text may reach the reader (decision 5).
 function rejectionLine(r: RejectReason): string {
   switch (r.kind) {
     case "unknown_phrase":
-      return `“${r.value}” isn't in this week's brief, so I didn't filter on it.`
+      return "One of those words isn't in this week's brief, so I didn't filter on it."
     case "unknown_value":
-      return `This brief has no ${r.field} called “${r.value}”.`
+      return `This brief has no ${r.field} with that name.`
     case "too_big":
       return "That rule was too complex, try something simpler."
     case "limit":
@@ -79,7 +82,7 @@ function rejectionLine(r: RejectReason): string {
       return "I couldn't find that setting."
     case "label_not_allowed":
     case "not_reader_words":
-      return `I can only name sections with words from the brief or your own message, not “${r.text}”.`
+      return "I can only name sections with words from the brief or your own message."
   }
 }
 
@@ -112,7 +115,7 @@ function changeLine(c: Change, after: ReturnType<typeof buildView>): string {
 
 const isStatusNew = (r: Rule) => r.op === "eq" && r.field === "status" && r.value === "new"
 
-export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult): Reply {
+export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult, request: string): Reply {
   const after = buildView(brief, result.spec)
   const lines = result.changes.map((c) => changeLine(c, after))
   let offer: Offer | null = null
@@ -121,8 +124,13 @@ export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult
 
   if (result.notSupported) {
     lines.push(NOT_SUPPORTED_COPY[result.notSupported.reason])
+    // Offer the nearest op only if it passes the same checks as an applied op,
+    // so its label is built from brief names or the reader's own words only.
     const n = result.notSupported.nearest
-    if (n) offer = { label: describeOp(n), ops: [n] }
+    if (n) {
+      const trial = applyOps(result.spec, [n], { brief, request })
+      if (trial.rejected.length === 0 && trial.changes.length > 0) offer = { label: describeOp(n), ops: [n] }
+    }
   }
 
   const changed = JSON.stringify(before) !== JSON.stringify(result.spec)
@@ -132,7 +140,11 @@ export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult
     if (after.shownTotal === 0) {
       lines.push("Nothing is left with these settings, so the full brief shows below.")
     } else if (after.hiddenTotal > total / 2) {
-      lines.push(`This hides ${after.hiddenTotal} of ${total} items.`)
+      // Skip the total when one hide filter already said the same number.
+      const added = result.changes.filter((c) => c.kind === "filter_added")
+      const onlyHide = added.length === 1 && added[0].kind === "filter_added" && added[0].filter.mode === "hide"
+      const alreadySaid = onlyHide && after.directives.find((d) => added[0].kind === "filter_added" && d.id === added[0].filter.id)?.hidden === after.hiddenTotal
+      if (!alreadySaid) lines.push(`This hides ${after.hiddenTotal} of ${total} items.`)
       const newOnly = result.changes.find((c) => c.kind === "filter_added" && c.filter.mode === "keep" && isStatusNew(c.filter.where))
       if (newOnly && newOnly.kind === "filter_added" && !offer) {
         offer = {

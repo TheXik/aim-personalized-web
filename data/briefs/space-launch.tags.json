@@ -1,12 +1,12 @@
 {
-  "version": 1,
-  "recap_id": "rcp_o5E4x8LcwqZPJv",
+  "version": 2,
+  "recap_hash": "0c9407a9e8bb9c",
   "source": "brief-space-launch.json",
   "method": "gpt-5-mini-hiring at reasoning effort low, run twice on 3 Nov 2026 (research/05-benchmark.md, experiment C). Kept the tags both runs returned that appear word for word in the item headline, paragraphs or means line. index is the position in recap.doc.items before any sorting.",
   "items": [
     {
       "index": 0,
-      "headline": "SpaceX plans a Sept. 28 Starship launch with 26 V3 satellites.",
+      "headline_hash": "19f2312939c72f",
       "companies": [
         "SpaceX",
         "Starlink"
@@ -14,7 +14,7 @@
     },
     {
       "index": 1,
-      "headline": "Blue Origin asked the FAA to limit Starship operations at LC-39A.",
+      "headline_hash": "18e0b6e4533138",
       "companies": [
         "Blue Origin",
         "SpaceX"
@@ -22,7 +22,7 @@
     },
     {
       "index": 2,
-      "headline": "Exolaunch booked a 2029 Starfall return mission on Starship.",
+      "headline_hash": "0a34904605be60",
       "companies": [
         "Exolaunch",
         "Space Cargo Unlimited"
@@ -30,40 +30,40 @@
     },
     {
       "index": 3,
-      "headline": "Judge cleared SpaceX’s 715-acre Texas refuge land swap.",
+      "headline_hash": "1086e1ec31a96f",
       "companies": [
         "SpaceX"
       ]
     },
     {
       "index": 4,
-      "headline": "SpaceX moved Crew-13’s Dragon spacecraft to Pad 40.",
+      "headline_hash": "153462b5beac6d",
       "companies": [
         "SpaceX"
       ]
     },
     {
       "index": 5,
-      "headline": "ISRO’s PSLV is 630 days without a success after two failures.",
+      "headline_hash": "007d093168404d",
       "companies": []
     },
     {
       "index": 6,
-      "headline": "SpaceX gained exclusive access to US Space Command’s classified tracking catalog.",
+      "headline_hash": "1f45cdfd0075fb",
       "companies": [
         "SpaceX"
       ]
     },
     {
       "index": 7,
-      "headline": "ESA extended Rocket Factory Augsburg’s Boost! support by €2.7 million.",
+      "headline_hash": "1ca7a455c7a725",
       "companies": [
         "Rocket Factory Augsburg"
       ]
     },
     {
       "index": 8,
-      "headline": "Isar Aerospace said CTO Josef Fleischmann is leaving to found Bavaria Instruments.",
+      "headline_hash": "1245558c043c66",
       "companies": [
         "Isar Aerospace",
         "Bavaria Instruments"
@@ -71,28 +71,28 @@
     },
     {
       "index": 9,
-      "headline": "ClearSpace signed an ESA contract for its Phoenix GEO life-extension mission.",
+      "headline_hash": "14f948ee0f9bab",
       "companies": [
         "ClearSpace"
       ]
     },
     {
       "index": 10,
-      "headline": "Hubble Network raised $200 million and said its early service is live.",
+      "headline_hash": "1f2f2aa5e5b58b",
       "companies": [
         "Hubble Network"
       ]
     },
     {
       "index": 11,
-      "headline": "Space Epoch raised $343 million for a Yuanxingzhe-1 rocket targeting 2026 flight.",
+      "headline_hash": "092c4405a44a97",
       "companies": [
         "Space Epoch"
       ]
     },
     {
       "index": 12,
-      "headline": "Sirius Space Services reported a one-minute continuous firing of its STAR1 engine.",
+      "headline_hash": "15c71a70db4fd1",
       "companies": [
         "Sirius Space Services"
       ]

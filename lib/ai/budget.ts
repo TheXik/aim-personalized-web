@@ -13,12 +13,18 @@
 
 // USD per token, gpt-5-mini Azure Global list price (research 05), times 1.2
 // in case the deployment is Data Zone, which is priced about 20% higher.
+import { onWorkers, spendDb, type D1 } from "../infra/cloudflare"
+
 const SAFETY = 1.2
 const PRICE = { input: (0.25 / 1e6) * SAFETY, cached: (0.025 / 1e6) * SAFETY, output: (2.0 / 1e6) * SAFETY }
 
-// Default 10 cents per UTC day. MODEL_BUDGET_USD can change it, never above 20 cents.
-const HARD_CEILING_USD = 0.2
-export const capUsd = () => Math.min(Number(process.env.MODEL_BUDGET_USD ?? 0.1) || 0.1, HARD_CEILING_USD)
+// Default 10 cents per UTC day. MODEL_BUDGET_USD can change it within a ceiling:
+// dev, tests and evals never above 20 cents, the production site on Workers
+// never above 10 dollars. The production value itself is set in wrangler.jsonc.
+const DEV_CEILING_USD = 0.2
+const PROD_CEILING_USD = 10
+export const ceilingUsd = () => (onWorkers() ? PROD_CEILING_USD : DEV_CEILING_USD)
+export const capUsd = () => Math.min(Number(process.env.MODEL_BUDGET_USD ?? 0.1) || 0.1, ceilingUsd())
 
 export type Ledger = { usd: number; calls: number; day: string }
 
@@ -31,9 +37,6 @@ interface Store {
 }
 
 // ---------- D1 (Cloudflare) ----------
-
-type D1Stmt = { bind(...v: unknown[]): D1Stmt; run(): Promise<{ meta: { changes: number } }>; first<T>(): Promise<T | null> }
-type D1 = { prepare(sql: string): D1Stmt; batch(stmts: D1Stmt[]): Promise<unknown> }
 
 function d1Store(db: D1): Store {
   const ensure = (day: string) =>
@@ -58,16 +61,9 @@ function d1Store(db: D1): Store {
   }
 }
 
-const onWorkers = () => typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers"
-
 async function cloudflareStore(): Promise<Store | null> {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare")
-    const env = (await getCloudflareContext({ async: true })).env as unknown as Record<string, unknown>
-    return env.MODEL_SPEND_DB ? d1Store(env.MODEL_SPEND_DB as D1) : null
-  } catch {
-    return null
-  }
+  const db = await spendDb()
+  return db ? d1Store(db) : null
 }
 
 // ---------- Local file (dev and tests) ----------
@@ -117,9 +113,11 @@ function fileStore(): Store {
 const store = async (): Promise<Store | null> => (onWorkers() ? cloudflareStore() : fileStore())
 const today = () => new Date().toISOString().slice(0, 10)
 
-// About 3.5 characters per token for English JSON, rounded up.
-export function worstCaseUsd(promptChars: number, maxOutputTokens: number): number {
-  return Math.ceil(promptChars / 3.5) * PRICE.input + maxOutputTokens * PRICE.output
+// A true upper bound: a token covers at least one UTF-8 byte, so input tokens
+// never exceed the prompt's byte length. Output is capped by maxOutputTokens.
+// The caller sends one attempt only (no hidden SDK retries), so no multiplier.
+export function worstCaseUsd(promptBytes: number, maxOutputTokens: number): number {
+  return promptBytes * PRICE.input + maxOutputTokens * PRICE.output
 }
 
 export function costUsd(u: { input: number; cachedInput: number; output: number }): number {
@@ -139,9 +137,11 @@ export async function reserve(worstCase: number): Promise<Reservation | null> {
   return (await s.reserve(day, worstCase, capUsd())) ? { day, usd: worstCase } : null
 }
 
-// Correct the reservation to the measured cost. Unknown usage keeps the worst case.
+// Correct the reservation to the measured cost, down or up. Unknown usage keeps
+// the worst case. An upward correction can take the total past the cap once,
+// and then reserve() refuses every further call that day.
 export async function settle(r: Reservation, actual: number | null): Promise<void> {
-  if (actual === null || actual >= r.usd) return
+  if (actual === null || actual === r.usd) return
   const s = await store()
   if (s) await s.adjust(r.day, actual - r.usd)
 }

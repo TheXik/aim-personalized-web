@@ -36,3 +36,19 @@ export function hasNumberText(s: string): boolean {
 export function wordCount(s: string): number {
   return s.split(/\s+/).filter(Boolean).length
 }
+
+// cyrb53, a small fast 53-bit hash, as 14 hex chars. Used to check that a tags
+// file entry belongs to the item at its index without storing the headline.
+// Not a security hash: it only has to catch a tags file from another brief.
+export function headlineHash(s: string): string {
+  let h1 = 0xdeadbeef
+  let h2 = 0x41c6ce57
+  for (let i = 0; i < s.length; i++) {
+    const ch = s.charCodeAt(i)
+    h1 = Math.imul(h1 ^ ch, 2654435761)
+    h2 = Math.imul(h2 ^ ch, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, "0")
+}

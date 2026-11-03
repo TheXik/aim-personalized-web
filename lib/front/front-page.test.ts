@@ -1,23 +1,36 @@
-import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { normalizeBrief } from "@/lib/brief/normalize"
-import { TagsFile } from "@/lib/brief/schema"
+import { HAS_REAL_BRIEFS, REAL_BRIEFS_SKIP, loadReal, loadSynthetic } from "@/tests/briefs"
 import type { Brief } from "@/lib/brief/types"
 import { buildView } from "@/lib/view/engine"
 import { DEFAULT_SPEC, type ViewSpec } from "@/lib/view/spec"
 import { buildFrontPage } from "./front-page"
 
-const load = (slug: string): Brief =>
-  normalizeBrief(
-    JSON.parse(readFileSync(`data/briefs/brief-${slug}.json`, "utf8")),
-    TagsFile.parse(JSON.parse(readFileSync(`data/briefs/${slug}.tags.json`, "utf8"))),
-  )
-const space = load("space-launch")
-const ea = load("enterprise-ai")
-const czsk = load("cz-sk-ai")
 const fp = (brief: Brief, patch: Partial<ViewSpec> = {}) => buildFrontPage(buildView(brief, { ...DEFAULT_SPEC, ...patch }))
 
-describe("buildFrontPage", () => {
+// Runs everywhere, on the invented briefs in tests/fixtures.
+describe("buildFrontPage on synthetic briefs", () => {
+  for (const name of ["orbital", "fintech"] as const) {
+    it(`${name}: every item is reachable, at most two takeaways, at most one figure`, () => {
+      const brief = loadSynthetic(name)
+      const f = fp(brief)
+      const threadLabels = new Set(f.threads.map((t) => t.label))
+      const reachable = new Set([
+        ...f.takeaways.map((t) => t.item.key),
+        ...f.order.filter((i) => i.current && threadLabels.has(i.current)).map((i) => i.key),
+        ...f.also.map((i) => i.key),
+      ])
+      expect(reachable.size).toBe(brief.items.length)
+      expect(f.takeaways.length).toBeLessThanOrEqual(2)
+      if (f.hook) expect(f.order.some((i) => i.key === f.hook!.item.key)).toBe(true)
+    })
+  }
+})
+
+const space = HAS_REAL_BRIEFS ? loadReal("space-launch") : (undefined as unknown as Brief)
+const ea = HAS_REAL_BRIEFS ? loadReal("enterprise-ai") : (undefined as unknown as Brief)
+const czsk = HAS_REAL_BRIEFS ? loadReal("cz-sk-ai") : (undefined as unknown as Brief)
+
+describe.skipIf(!HAS_REAL_BRIEFS)(`buildFrontPage, ${REAL_BRIEFS_SKIP}`, () => {
   it("takes the two 'what it means' lines from the two detail stories", () => {
     for (const brief of [space, ea, czsk]) {
       const f = fp(brief)

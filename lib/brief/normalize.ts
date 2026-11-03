@@ -1,7 +1,7 @@
 import { RawBriefFile, type RawCitation, type RawItem, type TagsFile } from "./schema"
 import type { Brief, Citation, Current, Figure, Item, Link, StatusKind, Tier } from "./types"
 import { TIERS } from "./types"
-import { fold, hasNumberText, wordCount } from "./text"
+import { fold, hasNumberText, headlineHash, wordCount } from "./text"
 
 export const AIM_APP = "https://app.startaiming.com/o/"
 const ID_RE = /^(sig|upd)_[A-Za-z0-9]+$/
@@ -105,12 +105,12 @@ export function normalizeBrief(input: unknown, tagsInput?: TagsFile | null): Bri
   const { recap } = raw
   const doc = recap.doc
 
-  const tags = tagsInput && tagsInput.recap_id === recap.id ? tagsInput : null
+  const tags = tagsInput && tagsInput.recap_hash === headlineHash(recap.id) ? tagsInput : null
   const tagsByIndex = new Map<number, string[]>()
   if (tags) {
     for (const t of tags.items) {
       const item = doc.items[t.index]
-      if (item && item.headline === t.headline) tagsByIndex.set(t.index, t.companies)
+      if (item && headlineHash(item.headline) === t.headline_hash) tagsByIndex.set(t.index, t.companies)
     }
   }
 
@@ -141,7 +141,8 @@ export function normalizeBrief(input: unknown, tagsInput?: TagsFile | null): Bri
       scopeId: it.scope_id ?? null,
       companies,
       primaryCompany: primaryCompanyOf(companies, it.headline, body),
-      hasNumber: hasNumberText([it.headline, body, figureText(figure)].join(" ")),
+      // A bar chart is numeric data by definition. Otherwise the strict text test.
+      hasNumber: figure?.type === "chart" || hasNumberText([it.headline, body, figureText(figure)].join(" ")),
       figure,
       sources: dedupeLinks([...it.cited_update_ids, ...it.cited_signal_ids]),
       updates: it.read_update_ids.map((id) => citationById.get(id)).filter((c): c is Citation => !!c),

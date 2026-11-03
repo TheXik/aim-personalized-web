@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "recap_hash": "0266eeeb4d1ba6",
+  "source": "synthetic-orbital.json",
+  "method": "SYNTHETIC. Hand-written tags, each name checked word for word against its item.",
+  "items": [
+    {
+      "index": 0,
+      "headline_hash": "0d04bafd941b7a",
+      "companies": [
+        "Vela Freight",
+        "Mirelle Orbital"
+      ]
+    },
+    {
+      "index": 1,
+      "headline_hash": "0eaccc193e3ca8",
+      "companies": [
+        "Korsa Launch"
+      ]
+    },
+    {
+      "index": 2,
+      "headline_hash": "1e42e74df896df",
+      "companies": [
+        "Quorn Mutual",
+        "Tessaly Re"
+      ]
+    },
+    {
+      "index": 3,
+      "headline_hash": "0fed554feab3d3",
+      "companies": [
+        "Mirelle Orbital",
+        "Sorell Relay"
+      ]
+    },
+    {
+      "index": 4,
+      "headline_hash": "1340876f8ab196",
+      "companies": [
+        "Tessaly Space"
+      ]
+    },
+    {
+      "index": 5,
+      "headline_hash": "102ed59107b1c7",
+      "companies": [
+        "Korsa Launch"
+      ]
+    },
+    {
+      "index": 6,
+      "headline_hash": "010bda45b9fe43",
+      "companies": [
+        "Quorn Dynamics",
+        "Vela Freight"
+      ]
+    }
+  ]
+}

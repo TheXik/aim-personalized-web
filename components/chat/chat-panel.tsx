@@ -206,13 +206,18 @@ export function ChatPanel({
           </svg>
         </button>
       </form>
-      {contactHref() ? (
-        <p className="chat__foot">
-          <a className="chat__tell" href={contactHref() ?? undefined}>
-            Tell Lukáš
-          </a>
-        </p>
-      ) : null}
+      <p className="chat__foot">
+        {contactHref() ? (
+          <>
+            <a className="chat__tell" href={contactHref() ?? undefined}>
+              Tell Lukáš
+            </a>
+            {" · "}
+          </>
+        ) : null}
+        {/* Readers are told that requests the chat cannot do are kept (lib/infra/declines.ts). */}
+        <span>Unmet requests are logged without IP.</span>
+      </p>
     </section>
   )
 }

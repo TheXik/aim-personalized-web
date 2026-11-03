@@ -16,12 +16,17 @@ export type ContactDetails = {
   time: string // ISO time
 }
 
+const cut = (s: string, n: number) => Array.from(s).slice(0, n).join("")
+
 export const contactLine = () => `Not what you needed? Tell ${CONTACT_NAME} directly. He reads every message and fixes it fast.`
 
 export function contactMailto(d: ContactDetails, email: string = CONTACT_EMAIL): string | null {
   if (!email) return null
-  const request = (d.request ?? "").replace(/\s+/g, " ").trim().slice(0, 500)
-  const subject = request ? `Aim brief: "${request.slice(0, 60)}${request.length > 60 ? "..." : ""}"` : "Aim brief feedback"
+  // Cut by code points, never inside an emoji: half a surrogate pair makes
+  // encodeURIComponent throw and would blank the page.
+  const request = cut((d.request ?? "").replace(/\s+/g, " ").trim(), 500)
+  const short = cut(request, 60)
+  const subject = request ? `Aim brief: "${short}${short.length < request.length ? "..." : ""}"` : "Aim brief feedback"
   const body = [
     `Hi ${CONTACT_NAME},`,
     "",

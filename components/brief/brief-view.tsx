@@ -4,6 +4,7 @@ import Link from "next/link"
 import type { Brief, Item } from "@/lib/brief/types"
 import type { DirectiveView, PageView } from "@/lib/view/model"
 import { AimMark } from "./aim-mark"
+import { CopyForAgent } from "./copy-for-agent"
 import { Currents } from "./currents"
 import { formatRange } from "./format"
 import { Section, sectionDomId } from "./section"
@@ -188,11 +189,13 @@ export function TopBar({
   chatOpen,
   onToggleChat,
   showChatToggle,
+  getMarkdown,
 }: {
   readerName: string
   chatOpen: boolean
   onToggleChat: () => void
   showChatToggle: boolean
+  getMarkdown?: () => string
 }) {
   return (
     <header className="top">
@@ -204,6 +207,7 @@ export function TopBar({
       <span className="top__label">Weekly brief</span>
       <span className="top__spacer" />
       <span className="top__reader">{readerName}</span>
+      {getMarkdown ? <CopyForAgent getMarkdown={getMarkdown} /> : null}
       <button type="button" className="top__btn" onClick={onToggleChat} hidden={!showChatToggle} aria-pressed={chatOpen}>
         {chatOpen ? "Hide chat" : "Reshape"}
       </button>

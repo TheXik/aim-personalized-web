@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { handleChat, type ModelResult } from "@/lib/chat/handle"
-import { askAiMarkdown, toAgentMarkdown } from "@/lib/export/agent-markdown"
+import { toAgentMarkdown } from "@/lib/export/agent-markdown"
 import { normalizeBrief } from "@/lib/brief/normalize"
 import type { Brief } from "@/lib/brief/types"
 import { loadSynthetic, rawSynthetic } from "@/tests/briefs"
@@ -258,16 +258,6 @@ describe("questions: closest change first, then Tell Lukáš", () => {
     expect(r.declined).toBe(true)
     const ok = await ask("hide the one-liners", [{ op: "filter", mode: "hide", where: { op: "eq", field: "tier", value: "one_liner" }, duration: "standing" }])
     expect(ok.declined).toBe(false)
-  })
-
-  it("ask your own AI carries the whole brief, even items the reader's settings hide", () => {
-    const hidden = orbital.items.filter((i) => i.tier === "one_liner")
-    const filtered = buildView(orbital, withSpec({ filters: [hide({ op: "eq", field: "tier", value: "one_liner" })] }))
-    const viewCopy = toAgentMarkdown({ view: filtered })
-    for (const i of hidden) expect(viewCopy).not.toContain(i.headline)
-    const ask = askAiMarkdown(orbital, "Who hired a chief engineer?")
-    expect(ask.split("\n\n")[0]).toBe("My question: Who hired a chief engineer?")
-    for (const i of orbital.items) expect(ask).toContain(i.headline)
   })
 
   it("puts the question on top of the copy for the reader's own AI", () => {

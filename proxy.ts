@@ -8,6 +8,17 @@ import { SESSION_COOKIE, sitePassword, verifySession } from "@/lib/infra/auth"
 const PUBLIC = new Set(["/login", "/api/login"])
 
 export async function proxy(request: NextRequest) {
+  // Production speaks HTTPS only, so the password and the session cookie never
+  // travel in plain text. This covers this app alone, not the rest of the zone.
+  // Local production runs (pnpm cf:preview on http://localhost) are left alone.
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(request.nextUrl.hostname)
+  if (process.env.NODE_ENV === "production" && request.nextUrl.protocol === "http:" && !local) {
+    const secure = request.nextUrl.clone()
+    secure.protocol = "https:"
+    secure.port = ""
+    return NextResponse.redirect(secure, 308)
+  }
+
   const password = sitePassword()
   if (!password) {
     if (process.env.NODE_ENV === "production") return new NextResponse("Not configured.", { status: 503 })

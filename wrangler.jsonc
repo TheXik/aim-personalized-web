@@ -18,7 +18,7 @@
   // CHAT_LIVE=1 lets the chat call the model. MODEL_BUDGET_USD is the spend cap per
   // UTC day, kept in the MODEL_SPEND_DB database (lib/ai/budget.ts), never above 0.20.
   "vars": { "CHAT_LIVE": "1", "MODEL_BUDGET_USD": "0.10" },
-  "d1_databases": [{ "binding": "MODEL_SPEND_DB", "database_name": "aim-model-spend", "database_id": "REPLACE_WITH_D1_DATABASE_ID" }],
+  "d1_databases": [{ "binding": "MODEL_SPEND_DB", "database_name": "aim-model-spend", "database_id": "72b31569-fc47-4743-9e47-1a912f4f1f77" }],
 
 
   "observability": { "enabled": true }

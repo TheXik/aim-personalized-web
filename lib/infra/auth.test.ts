@@ -92,6 +92,26 @@ describe("proxy", () => {
     vi.stubEnv("NODE_ENV", "development")
     expect((await proxy(req("/"))).headers.get("x-middleware-next")).toBe("1")
   })
+
+  it("sends plain HTTP to HTTPS in production, before anything else", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    for (const path of ["/login?next=%2Fr%2Fcz-sk-ai", "/api/login", "/r/space-launch"]) {
+      const res = await proxy(new NextRequest(`http://aim.lukashellesch.com${path}`))
+      expect(res.status).toBe(308)
+      expect(res.headers.get("location")).toBe(`https://aim.lukashellesch.com${path}`)
+    }
+  })
+
+  it("leaves a local production preview on http://localhost alone", async () => {
+    vi.stubEnv("NODE_ENV", "production")
+    const res = await proxy(new NextRequest("http://localhost:8787/login"))
+    expect(res.status).not.toBe(308)
+  })
+
+  it("leaves plain HTTP alone in development", async () => {
+    vi.stubEnv("NODE_ENV", "development")
+    expect((await proxy(new NextRequest("http://localhost:3000/login"))).headers.get("x-middleware-next")).toBe("1")
+  })
 })
 
 describe("POST /api/login", () => {

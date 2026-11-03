@@ -123,9 +123,10 @@ export async function callStructured<T>({
 
   // Hard spend cap (lib/ai/budget.ts). A call that could cross it is never sent.
   const worstCase = worstCaseUsd(system.length + prompt.length, maxOutputTokens);
-  if (!reserve(worstCase)) {
+  const reservation = await reserve(worstCase);
+  if (!reservation) {
     const ms = Math.round(performance.now() - t0);
-    logCall({ label, ok: false, reason: "budget", ms, ...spent() });
+    logCall({ label, ok: false, reason: "budget", ms, ...(await spent()) });
     return { ok: false, reason: "budget", usage: null, ms };
   }
 
@@ -143,15 +144,15 @@ export async function callStructured<T>({
     });
     const ms = Math.round(performance.now() - t0);
     const usage = toUsage(r.usage) ?? { input: 0, cachedInput: 0, output: 0, reasoning: 0 };
-    settle(worstCase, costUsd(usage));
-    logCall({ label, ok: true, ms, effort, finishReason: r.finishReason, ...usage, spentUsd: spent().usd });
+    await settle(reservation, costUsd(usage));
+    logCall({ label, ok: true, ms, effort, finishReason: r.finishReason, ...usage, spentUsd: (await spent()).usd });
     return { ok: true, output: r.output as T, usage, ms };
   } catch (error) {
     const ms = Math.round(performance.now() - t0);
     const reason = classify(error, signal.aborted);
     const usage = toUsage((error as { usage?: UsageLike }).usage);
-    settle(worstCase, usage ? costUsd(usage) : null);
-    logCall({ label, ok: false, reason, ms, effort, ...(usage ?? {}), spentUsd: spent().usd });
+    await settle(reservation, usage ? costUsd(usage) : null);
+    logCall({ label, ok: false, reason, ms, effort, ...(usage ?? {}), spentUsd: (await spent()).usd });
     return { ok: false, reason, usage, ms };
   }
 }

@@ -19,17 +19,38 @@ describe("model budget", () => {
     const b = await import("./budget")
     const worst = b.worstCaseUsd(8_000, 2_000) // about 0.0055 USD
     let sent = 0
-    while (b.reserve(worst)) sent++
+    while (await b.reserve(worst)) sent++
+    expect(sent).toBeGreaterThan(0)
     expect(sent).toBe(Math.floor(0.1 / worst))
-    expect(b.spent().usd).toBeLessThanOrEqual(0.1)
+    expect((await b.spent()).usd).toBeLessThanOrEqual(0.1)
   })
 
   it("settles to the measured cost so cheap calls leave room", async () => {
     const b = await import("./budget")
     const worst = b.worstCaseUsd(8_000, 2_000)
-    expect(b.reserve(worst)).toBe(true)
-    b.settle(worst, b.costUsd({ input: 2_000, cachedInput: 0, output: 300 }))
-    expect(b.spent().usd).toBeCloseTo((2_000 * 0.25 + 300 * 2) * 1.2 / 1e6, 8)
+    const r = await b.reserve(worst)
+    expect(r).not.toBeNull()
+    await b.settle(r!, b.costUsd({ input: 2_000, cachedInput: 0, output: 300 }))
+    expect((await b.spent()).usd).toBeCloseTo((2_000 * 0.25 + 300 * 2) * 1.2 / 1e6, 8)
+  })
+
+  it("concurrent calls can't overshoot the cap or erase each other's reservations", async () => {
+    const b = await import("./budget")
+    const worst = b.worstCaseUsd(8_000, 2_000)
+    const results = await Promise.all(Array.from({ length: 50 }, () => b.reserve(worst)))
+    const granted = results.filter(Boolean)
+    expect(granted).toHaveLength(Math.floor(0.1 / worst))
+    // Settle half in parallel: the total must equal the sum of what is left.
+    const half = granted.slice(0, 5)
+    await Promise.all(half.map((r) => b.settle(r!, 0.001)))
+    expect((await b.spent()).usd).toBeCloseTo(worst * (granted.length - 5) + 0.001 * 5, 10)
+  })
+
+  it("fails closed on Workers without a D1 binding", async () => {
+    vi.stubGlobal("navigator", { userAgent: "Cloudflare-Workers" })
+    const b = await import("./budget")
+    expect(await b.reserve(0.001)).toBeNull()
+    vi.unstubAllGlobals()
   })
 
   it("can never be raised above 20 cents", async () => {

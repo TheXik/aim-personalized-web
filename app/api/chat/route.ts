@@ -1,9 +1,8 @@
-import { readFile } from "node:fs/promises"
-import path from "node:path"
 import { callStructured } from "@/lib/ai/azure"
 import { loadBrief } from "@/lib/brief/load"
 import { handleChat, type ModelResult } from "@/lib/chat/handle"
 import { Edit } from "@/lib/view/ops"
+import VIEW_EDITOR_PROMPT from "@/prompts/view-editor.md"
 
 // POST /api/chat  { reader, request, spec }  =>  { spec, reply, changed, offer, source }
 // The page is never touched by the model directly: the model returns edit ops,
@@ -42,12 +41,6 @@ function takeModelCall(): boolean {
   return true
 }
 
-let systemPrompt: string | null = null
-async function system() {
-  systemPrompt ??= await readFile(path.join(process.cwd(), "prompts", "view-editor.md"), "utf8")
-  return systemPrompt
-}
-
 // Live model calls are opt-in with CHAT_LIVE=1, so no dev server spends the
 // model budget by accident. Without it the chat runs on the built-in shortcuts.
 const offlineMode = () => process.env.CHAT_LIVE !== "1" || !process.env.AZURE_OPENAI_API_KEY
@@ -70,7 +63,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "rate_limited", reply: "That's a lot of changes at once. Give it a minute." }, { status: 429 })
   }
 
-  const prompt = await system()
   const res = await handleChat(
     { request: body.request, spec: body.spec },
     {
@@ -78,7 +70,7 @@ export async function POST(req: Request) {
       callModel: async (userPrompt): Promise<ModelResult> => {
         if (offlineMode()) return { ok: false, reason: "error" }
         if (!takeModelCall()) return { ok: false, reason: "rate_limited" }
-        const r = await callStructured({ label: "chat", system: prompt, prompt: userPrompt, schema: Edit })
+        const r = await callStructured({ label: "chat", system: VIEW_EDITOR_PROMPT, prompt: userPrompt, schema: Edit })
         return r.ok ? { ok: true, output: r.output } : { ok: false, reason: r.reason }
       },
       log: (entry) => console.info(JSON.stringify({ reader: body.reader, ...entry })),

@@ -1,26 +1,18 @@
-import { readFile } from "node:fs/promises"
-import path from "node:path"
+import { RAW_BRIEFS, RAW_TAGS } from "./data"
 import { normalizeBrief } from "./normalize"
 import { TagsFile, isReaderSlug, type ReaderSlug } from "./schema"
 import type { Brief } from "./types"
 
-// Server only. Reads one reader's brief and company tags from data/briefs.
-// A slug only ever reaches its own files.
-const DIR = path.join(process.cwd(), "data", "briefs")
+// Server side. One reader's brief and company tags. A slug only ever reaches its own data.
 
-export async function readRawBrief(slug: ReaderSlug): Promise<unknown> {
-  return JSON.parse(await readFile(path.join(DIR, `brief-${slug}.json`), "utf8"))
-}
+export const readRawBrief = (slug: ReaderSlug): unknown => RAW_BRIEFS[slug]
 
-export async function readTags(slug: ReaderSlug): Promise<TagsFile | null> {
-  try {
-    return TagsFile.parse(JSON.parse(await readFile(path.join(DIR, `${slug}.tags.json`), "utf8")))
-  } catch {
-    return null
-  }
+export function readTags(slug: ReaderSlug): TagsFile | null {
+  const parsed = TagsFile.safeParse(RAW_TAGS[slug])
+  return parsed.success ? parsed.data : null
 }
 
 export async function loadBrief(slug: string): Promise<Brief | null> {
   if (!isReaderSlug(slug)) return null
-  return normalizeBrief(await readRawBrief(slug), await readTags(slug))
+  return normalizeBrief(readRawBrief(slug), readTags(slug))
 }

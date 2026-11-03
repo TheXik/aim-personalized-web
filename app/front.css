@@ -446,3 +446,8 @@
 /* Phone sheet: tall enough that all four examples show above the input. */
 @media (max-width: 1023px) { .chat--sheet { height: 70dvh; } .app[data-sheet] .fp { padding-bottom: calc(70dvh + 24px); } }
 @media (max-width: 599px) { .tb__market { display: none; } }
+/* Phone: after a change the sheet shrinks to a peek with the latest reply, the page shows above it. */
+@media (max-width: 1023px) {
+  .chat--sheet[data-sheet="peek"] { height: 34dvh; }
+  .app[data-sheet="peek"] .fp { padding-bottom: calc(34dvh + 24px); }
+}

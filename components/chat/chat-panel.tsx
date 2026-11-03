@@ -23,9 +23,10 @@ export type ChatTurn =
       text: string
       steps: ChatStep[]
       offer: Offer | null
-      // What the reader asked, for "Ask your own AI" and the direct line.
+      // What the reader asked, for the direct line.
       request: string
-      askAi: { question: string } | null
+      // The page could not do it (a question, or a change it cannot make): the turn offers next steps.
+      couldNot: boolean
       contact: ContactOffer | null
     }
 
@@ -41,7 +42,6 @@ export function ChatPanel({
   viewControls,
   onSend,
   onOffer,
-  onAskAi,
   contactHref,
   onClose,
   sheet,
@@ -57,13 +57,11 @@ export function ChatPanel({
   viewControls: ReactNode
   onSend: (text: string) => void
   onOffer: (turnId: string, offer: Offer) => void
-  // Copies the whole brief with the question on top. Resolves true when copied.
-  onAskAi: (question: string) => Promise<boolean>
   // The "Tell Lukáš" mailto for a request (or for no request), null when there is no address.
   contactHref: (request?: string) => string | null
   onClose: () => void
-  sheet?: "half" | "full"
-  onSheet?: (s: "half" | "full") => void
+  sheet?: "peek" | "half" | "full"
+  onSheet?: (s: "peek" | "half" | "full") => void
   autoFocus?: boolean
 }) {
   const [text, setText] = useState("")
@@ -71,11 +69,20 @@ export function ChatPanel({
   const input = useRef<HTMLTextAreaElement>(null)
   const lastId = turns[turns.length - 1]?.id
 
+  // Opening the panel lands on the latest message and the input at once. New replies scroll in smoothly.
+  const opened = useRef(false)
   useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    if (!opened.current) {
+      opened.current = true
+      el.scrollTop = el.scrollHeight
+      return
+    }
     if (turns.length === 0) return
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: reduce ? "auto" : "smooth" })
-  }, [turns])
+    el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" })
+  }, [turns, sheet])
   const last = turns[turns.length - 1]
   const status = !last || last.role === "user" ? "" : last.state === "pending" ? "Changing your view" : last.text
 
@@ -112,7 +119,7 @@ export function ChatPanel({
           type="button"
           className="chat__grabber"
           aria-label={sheet === "full" ? "Make the panel smaller" : "Make the panel bigger"}
-          onClick={() => onSheet?.(sheet === "full" ? "half" : "full")}
+          onClick={() => onSheet?.(sheet === "full" ? "half" : sheet === "half" ? "full" : "half")}
         >
           <span />
         </button>
@@ -169,7 +176,7 @@ export function ChatPanel({
                     isLast={t.id === lastId}
                     busy={busy}
                     onOffer={onOffer}
-                    onAskAi={onAskAi}
+                    suggestions={suggestions}
                     contactHref={contactHref}
                   />
                 )}
@@ -223,34 +230,32 @@ export function ChatPanel({
 }
 
 /**
- * One reply from Aim. When the page could not do what the reader asked, the next
- * steps come one at a time: the closest view as one click, then "Ask your own AI"
- * (the whole brief with the question on top), then the direct line to Lukáš.
+ * One reply from Aim. When the page could not do what the reader asked, the next steps
+ * come one at a time and every one of them changes the view: the closest view as one
+ * click, else the example requests, and as the last step the direct line to Lukáš.
  */
 function AssistantTurn({
   turn,
   isLast,
   busy,
   onOffer,
-  onAskAi,
+  suggestions,
   contactHref,
 }: {
   turn: Extract<ChatTurn, { role: "assistant"; state: "done" | "error" }>
   isLast: boolean
   busy: boolean
   onOffer: (turnId: string, offer: Offer) => void
-  onAskAi: (question: string) => Promise<boolean>
+  suggestions: Suggestion[]
   contactHref: (request?: string) => string | null
 }) {
   const [declined, setDeclined] = useState(false)
-  const [asked, setAsked] = useState<"idle" | "copied" | "failed">("idle")
   const offer = isLast && !declined ? turn.offer : null
-  // "Ask your own AI" comes right away when there is no offer, else once the reader says the offer is not it.
-  const showAsk = isLast && !!turn.askAi && (!turn.offer || declined)
-  const href = turn.contact ? contactHref(turn.request) : null
-  // The direct line: right away when the reader sounds frustrated, else as the last step,
-  // once the reader is past the offer (declined it, or there was none).
   const pastOffer = !turn.offer || declined
+  // Nothing changed and nothing to offer: the requests this page can do, one click each.
+  const showExamples = isLast && turn.couldNot && pastOffer
+  const href = turn.contact ? contactHref(turn.request) : null
+  // The direct line: right away when the reader sounds frustrated, else as the last step.
   const showContact = isLast && !!href && (turn.contact?.when === "now" || pastOffer)
   return (
     <div className="turn__aim">
@@ -276,30 +281,21 @@ function AssistantTurn({
             <button type="button" className="next__primary" disabled={busy} onClick={() => onOffer(turn.id, offer)}>
               {offer.label}
             </button>
-            {turn.askAi || turn.contact ? (
-              <button type="button" className="linkbtn next__no" onClick={() => setDeclined(true)}>
-                Not what I meant
-              </button>
-            ) : null}
+            <button type="button" className="linkbtn next__no" onClick={() => setDeclined(true)}>
+              Not what I meant
+            </button>
           </div>
         ) : null}
-        {showAsk && turn.askAi ? (
+        {showExamples ? (
           <div className="next next--ask">
-            <p className="next__text">Your own AI can answer it from this week&apos;s brief.</p>
-            <button
-              type="button"
-              className="next__primary"
-              onClick={async () => setAsked((await onAskAi(turn.askAi!.question)) ? "copied" : "failed")}
-            >
-              {asked === "copied" ? "Copied" : "Ask your own AI"}
-            </button>
-            <p className="next__hint" role="status">
-              {asked === "copied"
-                ? "Copied your question and the whole brief. Paste it into the AI you use."
-                : asked === "failed"
-                  ? "Copy did not work in this browser. Use Copy for your agent at the top."
-                  : "Copies your question and the whole brief, with the links, for your AI."}
-            </p>
+            <p className="next__text">This page can do these:</p>
+            <div className="chat__suggest">
+              {suggestions.map((sug) => (
+                <button key={sug.label} type="button" className="chip chip--plain" disabled={busy} onClick={sug.run}>
+                  {sug.label}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
         {showContact && href ? (

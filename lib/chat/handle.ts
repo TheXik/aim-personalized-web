@@ -12,7 +12,7 @@ export const MAX_REQUEST_CHARS = 500
 
 export type ModelResult =
   | { ok: true; output: Edit }
-  | { ok: false; reason: "timeout" | "content_filter" | "rate_limited" | "invalid_output" | "error" }
+  | { ok: false; reason: "timeout" | "content_filter" | "rate_limited" | "invalid_output" | "budget" | "error" }
 
 export type ChatDeps = {
   brief: Brief
@@ -33,6 +33,7 @@ const FAILURE_COPY: Record<Exclude<ModelResult, { ok: true }>["reason"], string>
   content_filter: "I can't help with that. Your page is unchanged.",
   rate_limited: "The assistant is busy right now. Your page is unchanged, try again in a moment.",
   invalid_output: "I couldn't turn that into a change. Your page is unchanged. Try saying it another way.",
+  budget: "The model budget for this demo is used up. Your page is unchanged, the suggestions still work.",
   error: "The assistant is unavailable right now. Your page is unchanged.",
 }
 

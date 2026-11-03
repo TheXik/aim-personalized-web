@@ -6,6 +6,7 @@
 // 2. The deployment's token rate limit is tight, so calls are not fanned out and a 429 is a
 //    normal outcome that the caller turns into a reply.
 import { createAzure } from "@ai-sdk/azure";
+import { costUsd, reserve, settle, spent, worstCaseUsd } from "./budget";
 import { APICallError, NoObjectGeneratedError, Output, RetryError, generateText } from "ai";
 import type { FlexibleSchema } from "ai";
 
@@ -45,7 +46,7 @@ export type Usage = {
   reasoning: number;
 };
 
-export type FailReason = "timeout" | "content_filter" | "rate_limited" | "invalid_output" | "error";
+export type FailReason = "timeout" | "content_filter" | "rate_limited" | "invalid_output" | "budget" | "error";
 
 export type CallResult<T> =
   | { ok: true; output: T; usage: Usage; ms: number }
@@ -120,6 +121,14 @@ export async function callStructured<T>({
     return { ok: false, reason: "error", usage: null, ms };
   }
 
+  // Hard spend cap (lib/ai/budget.ts). A call that could cross it is never sent.
+  const worstCase = worstCaseUsd(system.length + prompt.length, maxOutputTokens);
+  if (!reserve(worstCase)) {
+    const ms = Math.round(performance.now() - t0);
+    logCall({ label, ok: false, reason: "budget", ms, ...spent() });
+    return { ok: false, reason: "budget", usage: null, ms };
+  }
+
   const signal = AbortSignal.timeout(timeoutMs);
   try {
     const r = await generateText({
@@ -134,13 +143,15 @@ export async function callStructured<T>({
     });
     const ms = Math.round(performance.now() - t0);
     const usage = toUsage(r.usage) ?? { input: 0, cachedInput: 0, output: 0, reasoning: 0 };
-    logCall({ label, ok: true, ms, effort, finishReason: r.finishReason, ...usage });
+    settle(worstCase, costUsd(usage));
+    logCall({ label, ok: true, ms, effort, finishReason: r.finishReason, ...usage, spentUsd: spent().usd });
     return { ok: true, output: r.output as T, usage, ms };
   } catch (error) {
     const ms = Math.round(performance.now() - t0);
     const reason = classify(error, signal.aborted);
     const usage = toUsage((error as { usage?: UsageLike }).usage);
-    logCall({ label, ok: false, reason, ms, effort, ...(usage ?? {}) });
+    settle(worstCase, usage ? costUsd(usage) : null);
+    logCall({ label, ok: false, reason, ms, effort, ...(usage ?? {}), spentUsd: spent().usd });
     return { ok: false, reason, usage, ms };
   }
 }

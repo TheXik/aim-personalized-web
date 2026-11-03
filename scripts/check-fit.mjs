@@ -35,6 +35,8 @@ const VIEWS = {
   "numbers-first": { ...DEFAULT, pins: [{ id: "p1", where: { op: "has_number" }, to: "top", label: null, expires: null }] },
   "by-company": { ...DEFAULT, group: "company" },
   "only-new": { ...DEFAULT, filters: [{ id: "f1", mode: "keep", where: { op: "eq", field: "status", value: "new" }, expires: null }] },
+  // No figures: the figure column disappears and the list takes the row, with no gap.
+  "no-figures": { ...DEFAULT, parts: { ...DEFAULT.parts, figures: "hide" } },
   // A saved rule that matches nothing this week: the page says so and shows the full brief.
   "nothing-matches": { ...DEFAULT, filters: [{ id: "f1", mode: "keep", where: { op: "contains", field: "headline", values: ["zzqx"] }, expires: null }] },
 }
@@ -44,7 +46,7 @@ for (const reader of READERS) {
   // 1470x800: a 13-inch MacBook Air in Chrome with tabs and bookmarks. 1366x768: the most common small laptop.
   for (const [w, h] of [[1280, 800], [1440, 900], [1470, 800], [1366, 768]]) CASES.push({ reader, w, h, chat: false, view: "default" })
   CASES.push({ reader, w: 1440, h: 900, chat: true, view: "default" })
-  for (const view of ["numbers-first", "by-company", "only-new", "nothing-matches"]) CASES.push({ reader, w: 1280, h: 800, chat: false, view })
+  for (const view of ["numbers-first", "by-company", "only-new", "nothing-matches", "no-figures"]) CASES.push({ reader, w: 1280, h: 800, chat: false, view })
 }
 
 function chromePath() {

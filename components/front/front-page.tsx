@@ -293,6 +293,24 @@ function Chevron() {
   )
 }
 
+/** The figure named by what it is, as in the reading panel: "Timeline · whole current". */
+function figureName(hook: Hook): string {
+  const f = hook.figure
+  const kind =
+    f.type === "timeline"
+      ? "Timeline"
+      : f.type === "chart"
+        ? f.block.chart_type === "bar"
+          ? "Bar chart"
+          : "Chart"
+        : f.type === "table"
+          ? "Table"
+          : f.type === "comparison"
+            ? "Comparison"
+            : "Figure"
+  return f.scope === "current" && hook.item.current ? `${kind} · whole current` : kind
+}
+
 function groupsShown(items: Item[], groupOf: Record<string, string>): number {
   return new Set(items.map((i) => groupOf[i.key]).filter(Boolean)).size
 }
@@ -334,11 +352,7 @@ function FigureOfTheWeek({ hook, onOpen }: { hook: Hook | null; onOpen: Open }) 
     <section className="fp__figure" aria-labelledby="fp-fig-t">
       <div className="fp__head">
         <h2 className="eyebrow fp__label" id="fp-fig-t">
-          {hook.figure.scope === "current" && hook.item.current
-            ? "The top story's current"
-            : hook.fromTopStory
-              ? "From the top story"
-              : "Figure of the week"}
+          {figureName(hook)}
         </h2>
         <button type="button" className="hook__open" onClick={() => onOpen({ kind: "story", key: hook.item.key })} title={hook.item.headline}>
           Open the story ›

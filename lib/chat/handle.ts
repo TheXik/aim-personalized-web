@@ -2,9 +2,10 @@ import type { Brief } from "../brief/types"
 import { applyOps, sanitizeSpec } from "../view/apply"
 import { buildCatalog, specForModel } from "../view/catalog"
 import type { Edit, Op } from "../view/ops"
-import { composeReply, type Offer } from "../view/reply"
+import { composeReply, describeOp, type Offer } from "../view/reply"
 import { parseStoredSpec, type ViewSpec } from "../view/spec"
 import { matchOffline } from "./offline"
+import { isQuestion, nearestForQuestion } from "./question"
 
 // One chat turn, with the model injected so it can be tested without Azure.
 
@@ -26,6 +27,11 @@ export type ChatResponse = {
   changed: boolean
   offer: Offer | null
   source: "model" | "offline" | "none"
+  // Set when the chat cannot do the request (a question, or a change this page
+  // cannot make). The UI offers "Ask your own AI" with the brief as Markdown and
+  // this question on top: right away when there is no offer, otherwise after
+  // the reader says the offered view is not it.
+  askAi: { question: string } | null
 }
 
 const FAILURE_COPY: Record<Exclude<ModelResult, { ok: true }>["reason"], string> = {
@@ -41,7 +47,25 @@ export async function handleChat(input: { request: unknown; spec: unknown }, dep
   const spec = sanitizeSpec(parseStoredSpec(input.spec), deps.brief)
   const request = typeof input.request === "string" ? input.request.trim().slice(0, MAX_REQUEST_CHARS) : ""
   const log = deps.log ?? (() => {})
-  if (!request) return { spec, reply: "Tell me how you'd like the page, for example “numbers first”.", changed: false, offer: null, source: "none" }
+  if (!request) return { spec, reply: "Tell me how you'd like the page, for example “numbers first”.", changed: false, offer: null, source: "none", askAi: null }
+
+  // Questions never reach the model. Closest view first, then "Ask your own AI".
+  if (isQuestion(request)) {
+    const nearest = nearestForQuestion(request, deps.brief)
+    const trial = nearest ? applyOps(spec, [nearest], { brief: deps.brief, request }) : null
+    const offer = nearest && trial && trial.rejected.length === 0 && trial.changes.length > 0 ? { label: describeOp(nearest), ops: [nearest] } : null
+    log({ event: "question", request })
+    return {
+      spec,
+      reply: offer
+        ? "This page doesn't answer questions. It only changes what you see, so every word stays from your brief. The closest view is one click away."
+        : "This page doesn't answer questions. It only changes what you see, so every word stays from your brief. You can ask your own AI with this week's brief.",
+      changed: false,
+      offer,
+      source: "none",
+      askAi: { question: request },
+    }
+  }
 
   const prompt = JSON.stringify({ catalog: buildCatalog(deps.brief), current_spec: specForModel(spec), request })
   const result = await deps.callModel(prompt)
@@ -55,7 +79,7 @@ export async function handleChat(input: { request: unknown; spec: unknown }, dep
     const offline = result.reason === "content_filter" ? null : matchOffline(request)
     if (!offline) {
       log({ event: "chat_failed", reason: result.reason })
-      return { spec, reply: FAILURE_COPY[result.reason], changed: false, offer: null, source: "none" }
+      return { spec, reply: FAILURE_COPY[result.reason], changed: false, offer: null, source: "none", askAi: null }
     }
     ops = offline
     source = "offline"
@@ -75,5 +99,7 @@ export async function handleChat(input: { request: unknown; spec: unknown }, dep
     })
   }
 
-  return { spec: applied.spec, reply: prefix + reply.text, changed: reply.changed, offer: reply.offer, source }
+  // The chat could not do it: an explicit "not supported", or nothing applied.
+  const couldNot = applied.notSupported !== null || (!reply.changed && applied.rejected.length > 0)
+  return { spec: applied.spec, reply: prefix + reply.text, changed: reply.changed, offer: reply.offer, source, askAi: couldNot ? { question: request } : null }
 }

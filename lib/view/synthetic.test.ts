@@ -221,3 +221,49 @@ describe("the browser-sent spec is cleaned before use", () => {
     expect(looksLikeClaim("Quick reads")).toBe(false)
   })
 })
+
+describe("questions: closest view first, then ask your own AI", () => {
+  const ask = async (request: string, ops: Op[] = []) => {
+    let calls = 0
+    const r = await handleChat({ request, spec: DEFAULT_SPEC }, { brief: orbital, callModel: async () => (calls++, { ok: true, output: { ops } }) })
+    return { ...r, calls }
+  }
+
+  it("detects questions without a model call and offers the closest view", async () => {
+    const r = await ask("Who did Vela Freight sign the return missions with?")
+    expect(r.calls).toBe(0)
+    expect(r).toMatchObject({ changed: false, source: "none", askAi: { question: "Who did Vela Freight sign the return missions with?" } })
+    expect(r.offer?.label).toBe("Only Vela Freight")
+    expect(r.spec).toEqual(DEFAULT_SPEC)
+  })
+
+  it("goes straight to ask your own AI when the question names nothing in the brief", async () => {
+    const r = await ask("Why is everyone talking about lunar landers?")
+    expect(r.calls).toBe(0)
+    expect(r.offer).toBeNull()
+    expect(r.reply).toMatch(/ask your own AI/)
+    expect(r.askAi?.question).toBe("Why is everyone talking about lunar landers?")
+  })
+
+  it("leaves polite requests and shortcuts to the normal path", async () => {
+    const { isQuestion } = await import("@/lib/chat/question")
+    for (const q of ["Who led the biggest round?", "Is Korsa Launch still delayed?", "Kdo vedl kolo?", "Čo to znamená pre nás?", "Which insurer changed cover"]) expect(isQuestion(q)).toBe(true)
+    for (const r of ["Can you hide the one-liners?", "What's new this week?", "Numbers first?", "group it by company", "Only Korsa Launch", "Could you make it shorter"]) expect(isQuestion(r)).toBe(false)
+  })
+
+  it("offers ask your own AI when the model says the page cannot do it", async () => {
+    const r = await ask("summarise this in three bullets", [{ op: "not_supported", reason: "new_text", nearest: null }])
+    expect(r.calls).toBe(1)
+    expect(r.askAi).toEqual({ question: "summarise this in three bullets" })
+    const ok = await ask("hide the one-liners", [{ op: "filter", mode: "hide", where: { op: "eq", field: "tier", value: "one_liner" }, duration: "standing" }])
+    expect(ok.askAi).toBeNull()
+  })
+
+  it("puts the question on top of the copy for the reader's own AI", () => {
+    const out = toAgentMarkdown({ view: buildView(orbital, DEFAULT_SPEC), question: "Who did Vela Freight sign with?" })
+    const [first, second] = out.split("\n\n")
+    expect(first).toBe("My question: Who did Vela Freight sign with?")
+    expect(second).toMatch(/^Answer it from my weekly market brief from Aim for .+ Use only those facts/)
+    expect(out).toContain(orbital.verdict)
+  })
+})

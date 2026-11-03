@@ -11,14 +11,22 @@ export type AgentMarkdownInput = {
   // Code-written labels of saved settings that are not filters or pins
   // (see components/brief/setting-chips.ts), e.g. "Grouped by company".
   settings?: string[]
+  // "Ask your own AI": the reader's own question, put on top of the brief.
+  question?: string
 }
 
 const STATUS: Record<string, string> = { new: "New", updated: "Updated", carried: "Carried over" }
 
-export function toAgentMarkdown({ view, settings = [] }: AgentMarkdownInput): string {
+export function toAgentMarkdown({ view, settings = [], question }: AgentMarkdownInput): string {
   const out: string[] = []
   const range = formatRange(view.periodStart, view.periodEnd)
-  out.push(`This is my weekly market brief from Aim for ${range}. Use only the facts below and cite the links when you answer.`)
+  const q = question?.trim()
+  if (q) out.push(`My question: ${inline(q)}`)
+  out.push(
+    q
+      ? `Answer it from my weekly market brief from Aim for ${range} below. Use only those facts, cite the links, and say so if the brief does not cover it.`
+      : `This is my weekly market brief from Aim for ${range}. Use only the facts below and cite the links when you answer.`,
+  )
 
   out.push(`# ${inline(view.title)}`)
   if (!view.titleIsVerdict) out.push(inline(view.verdict))

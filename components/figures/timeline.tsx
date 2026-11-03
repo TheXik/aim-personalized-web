@@ -1,7 +1,6 @@
 import type { TimelineBlock } from "@/lib/brief/schema"
 import { formatDay } from "@/components/brief/format"
-
-const APP = "https://app.startaiming.com/o/"
+import { linkFor } from "@/lib/brief/normalize"
 
 /**
  * Vertical rail on narrow containers, four columns on a wide one (CSS container query).
@@ -18,8 +17,8 @@ export function Timeline({ block }: { block: TimelineBlock }) {
             {formatDay(p.date)}
           </time>
           <p className="tl__text">
-            {p.update_id ? (
-              <a className="tl__link" href={`${APP}${p.update_id}`} target="_blank" rel="noreferrer">
+            {p.update_id && linkFor(p.update_id) ? (
+              <a className="tl__link" href={linkFor(p.update_id)!.href} target="_blank" rel="noreferrer">
                 {p.text}
               </a>
             ) : (

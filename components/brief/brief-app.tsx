@@ -8,6 +8,7 @@ import { buildView } from "@/lib/view/engine"
 import type { PageView } from "@/lib/view/model"
 import { DEFAULT_SPEC, parseStoredSpec, specStorageKey, type ViewSpec } from "@/lib/view/spec"
 import { applyOps } from "@/lib/view/apply"
+import { toAgentMarkdown } from "@/lib/export/agent-markdown"
 import { composeReply, type Offer } from "@/lib/view/reply"
 import { ChatPanel, type ChatStep, type ChatTurn, type Suggestion } from "@/components/chat/chat-panel"
 import { BriefView, Rail, TopBar } from "./brief-view"
@@ -200,6 +201,7 @@ export function BriefApp({ reader, readerName, tags }: { reader: string; readerN
             chatOpen={chatOpen}
             onToggleChat={() => setChatOpen((o) => !o)}
             showChatToggle={wide}
+            getMarkdown={() => toAgentMarkdown({ view, settings: settings.map((c) => c.label) })}
           />
         </div>
         {laptop ? (

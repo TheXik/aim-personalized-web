@@ -91,6 +91,12 @@
 }
 .top__btn:hover { background: var(--b-paper); }
 .top__btn[hidden] { display: none; }
+.top__btn.is-done { color: var(--aim-sage-ink); border-color: var(--aim-sage-200); background: var(--aim-sage-50); }
+.top__btnshort { display: none; }
+@media (max-width: 599px) {
+  .top__btnlong { display: none; }
+  .top__btnshort { display: inline; }
+}
 @media (max-width: 599px) {
   .top { padding: 0 12px; gap: 10px; }
   .top__reader { display: none; }

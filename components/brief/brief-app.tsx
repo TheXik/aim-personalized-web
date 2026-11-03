@@ -51,6 +51,9 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const declines = useRef(0)
   // Focus moves into the chat only when the reader opens it, not when a remembered panel reappears on load.
   const [focusChat, setFocusChat] = useState(false)
+  // Where the panel lands: "Your view" opens it at the top, on the list of changes,
+  // "Change what you see" on the latest message and the input.
+  const [jump, setJump] = useState<{ to: "view" | "latest"; n: number }>({ to: "latest", n: 0 })
   // One-screen layout from 1024px wide (laptops, tablets in landscape). Below it the page stacks.
   const desk = useMedia("(min-width: 1024px)", true)
 
@@ -279,10 +282,11 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
 
   // On a laptop the reading panel and the chat do not stack. Opening the chat closes the panel.
   const chatShown = chatOpen && !(reading && desk)
-  const openChat = () => {
+  const openChat = (to: "view" | "latest" = "latest") => {
     if (reading && desk) closeReading()
     setSheet("half")
-    setFocusChat(desk)
+    setFocusChat(desk && to === "latest")
+    setJump((j) => ({ to, n: j.n + 1 }))
     setChatOpen(true)
   }
 
@@ -295,8 +299,8 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         changes={changes}
         hidden={view.hiddenTotal}
         chatOpen={chatShown}
-        onChat={() => (chatShown ? closeChat() : openChat())}
-        onOpenChat={openChat}
+        onChat={() => (chatShown ? closeChat() : openChat("latest"))}
+        onOpenChat={() => openChat("view")}
         getMarkdown={() => toAgentMarkdown({ view, settings: settings.map((c) => c.label) })}
         showChatButton={desk}
       />
@@ -333,12 +337,13 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           contactHref={contactHref}
           onClose={closeChat}
           autoFocus={focusChat && desk}
+          jump={jump}
         />
       ) : null}
       {!desk && !chatOpen ? (
         <ChatDock
           changes={changes}
-          onOpen={openChat}
+          onOpen={() => openChat("latest")}
         />
       ) : null}
     </div>

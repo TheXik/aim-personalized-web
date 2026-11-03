@@ -47,6 +47,7 @@ export function ChatPanel({
   sheet,
   onSheet,
   autoFocus = false,
+  jump,
 }: {
   // card: floating panel on a laptop. sheet: bottom sheet on a phone or tablet.
   variant: "card" | "sheet"
@@ -63,6 +64,8 @@ export function ChatPanel({
   sheet?: "peek" | "half" | "full"
   onSheet?: (s: "peek" | "half" | "full") => void
   autoFocus?: boolean
+  // Where to land: "view" is the top (the reader's changes), "latest" the newest message. n changes per request.
+  jump?: { to: "view" | "latest"; n: number }
 }) {
   const [text, setText] = useState("")
   const scroller = useRef<HTMLDivElement>(null)
@@ -70,19 +73,32 @@ export function ChatPanel({
   const lastId = turns[turns.length - 1]?.id
 
   // Opening the panel lands on the latest message and the input at once. New replies scroll in smoothly.
-  const opened = useRef(false)
+  // Idempotent (React runs effects twice in development): the panel lands once per open, then
+  // scrolls to the newest message only when a message is added or the sheet changes size.
+  const seen = useRef<{ count: number; sheet: string | undefined } | null>(null)
   useEffect(() => {
     const el = scroller.current
     if (!el) return
-    if (!opened.current) {
-      opened.current = true
-      el.scrollTop = el.scrollHeight
+    if (seen.current === null) {
+      seen.current = { count: turns.length, sheet }
+      el.scrollTop = jump?.to === "view" ? 0 : el.scrollHeight
       return
     }
-    if (turns.length === 0) return
+    if (seen.current.count === turns.length && seen.current.sheet === sheet) return
+    seen.current = { count: turns.length, sheet }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" })
+    // Jumps have their own effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, sheet])
+  // A jump request while the panel is already open ("Your view" clicked again).
+  const lastJump = useRef(jump?.n ?? 0)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el || !jump || jump.n === lastJump.current) return
+    lastJump.current = jump.n
+    el.scrollTop = jump.to === "view" ? 0 : el.scrollHeight
+  }, [jump])
   const last = turns[turns.length - 1]
   const status = !last || last.role === "user" ? "" : last.state === "pending" ? "Changing your view" : last.text
 

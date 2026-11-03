@@ -102,24 +102,29 @@ export function ReadingPanel({
         <span className="rp__spacer" />
         {reading.kind === "story" ? (
           <>
-            <button
-              type="button"
-              className="rp__nav"
-              aria-label="Previous story"
-              disabled={!prev}
-              onClick={() => prev && onOpen({ kind: "story", key: prev.key })}
-            >
-              <Arrow dir="left" />
-            </button>
-            <button
-              type="button"
-              className="rp__nav"
-              aria-label="Next story"
-              disabled={!next}
-              onClick={() => next && onOpen({ kind: "story", key: next.key })}
-            >
-              <Arrow dir="right" />
-            </button>
+            {/* Labelled, bordered steps through the brief. The one that cannot move is not shown. */}
+            {prev ? (
+              <button
+                type="button"
+                className="rp__step"
+                aria-label="Previous story"
+                title="Previous story (←)"
+                onClick={() => onOpen({ kind: "story", key: prev.key })}
+              >
+                ‹ Previous
+              </button>
+            ) : null}
+            {next ? (
+              <button
+                type="button"
+                className="rp__step"
+                aria-label="Next story"
+                title="Next story (→)"
+                onClick={() => onOpen({ kind: "story", key: next.key })}
+              >
+                Next ›
+              </button>
+            ) : null}
           </>
         ) : null}
         <button type="button" className="rp__close" aria-label="Close and go back to the front page" onClick={onClose}>

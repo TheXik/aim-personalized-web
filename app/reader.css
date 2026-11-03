@@ -110,3 +110,16 @@
 /* The story you came from, marked in the current's list. */
 .rp__row.is-current .rp__rowtext { color: var(--b-ink); font-weight: 500; }
 .rp__rowtag--reading { background: var(--b-ink); color: #fff; }
+
+/* Previous and Next: labelled, bordered, 36px tall, easy to see and hit. */
+.rp__step {
+  height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--b-line-strong); background: var(--background); cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 500; color: var(--b-title); white-space: nowrap;
+  transition: background-color var(--dur-hover) var(--ease-standard), border-color var(--dur-hover) var(--ease-standard);
+}
+.rp__step:hover { background: var(--b-paper); border-color: var(--b-faint); }
+.rp__step + .rp__step { margin-left: 6px; }
+.rp__bar { gap: 8px; }
+.rp__close { width: 36px; height: 36px; }
+/* Narrow panels: the position label gives way before the buttons do. */
+@media (max-width: 599px) { .rp__pos { display: none; } .rp__step { padding: 0 12px; } }

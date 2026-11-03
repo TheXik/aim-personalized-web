@@ -1,5 +1,7 @@
 import { callStructured } from "@/lib/ai/azure"
+import { MISSING_BRIEF_MESSAGE } from "@/lib/brief/data"
 import { loadBrief } from "@/lib/brief/load"
+import { isReaderSlug } from "@/lib/brief/schema"
 import { handleChat, type ModelResult } from "@/lib/chat/handle"
 import { Edit } from "@/lib/view/ops"
 import VIEW_EDITOR_PROMPT from "@/prompts/view-editor.md"
@@ -55,8 +57,9 @@ export async function POST(req: Request) {
     return Response.json({ error: "bad_json" }, { status: 400 })
   }
 
-  const brief = typeof body.reader === "string" ? await loadBrief(body.reader) : null
-  if (!brief) return Response.json({ error: "unknown_reader" }, { status: 404 })
+  if (typeof body.reader !== "string" || !isReaderSlug(body.reader)) return Response.json({ error: "unknown_reader" }, { status: 404 })
+  const brief = await loadBrief(body.reader)
+  if (!brief) return Response.json({ error: "missing_brief", reply: MISSING_BRIEF_MESSAGE }, { status: 404 })
 
   const client = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
   if (!allowClient(`${body.reader}:${client}`)) {

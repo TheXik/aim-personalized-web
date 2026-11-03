@@ -404,3 +404,20 @@ describe("thread cards follow pins and newest first", () => {
     expect([...dates].sort().reverse()).toEqual(dates)
   })
 })
+
+describe("a half-filled figure never breaks the page", () => {
+  it.each([
+    ["chart", { t: "chart", head: "Broken chart", chart_type: "bar" }],
+    ["timeline", { t: "timeline", head: "Broken timeline" }],
+    ["table", { t: "table", head: "Broken table", cols: ["A"] }],
+    ["comparison", { t: "comparison", head: "Broken comparison", them: { name: "x", points: [] } }],
+  ])("%s without its data becomes an unknown figure with its head", (_, block) => {
+    const raw = rawSynthetic("orbital") as { recap: { doc: { items: { figure: unknown }[] } } }
+    raw.recap.doc.items[0].figure = { scope: "item", fresh_update_ids: [], block }
+    const b = normalizeBrief(raw, null)
+    const f = b.items.find((i) => i.index === 0)!.figure!
+    expect(f.type).toBe("unknown")
+    expect(f.block.head).toBe((block as { head: string }).head)
+    expect(() => buildView(b, DEFAULT_SPEC)).not.toThrow()
+  })
+})

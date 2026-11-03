@@ -1,4 +1,4 @@
-import { RawBriefFile, type RawCitation, type RawItem, type TagsFile } from "./schema"
+import { ChartBlock, ComparisonBlock, RawBriefFile, TableBlock, TimelineBlock, type RawCitation, type RawItem, type TagsFile } from "./schema"
 import type { Brief, Citation, Current, Figure, Item, Link, StatusKind, Tier } from "./types"
 import { TIERS } from "./types"
 import { fold, hasNumberText, headlineHash, wordCount } from "./text"
@@ -27,15 +27,13 @@ function figureOf(raw: RawItem["figure"]): Figure | null {
   if (!raw) return null
   const scope = raw.scope === "current" ? "current" : "item"
   const b = raw.block
-  switch (b.t) {
-    case "timeline":
-    case "chart":
-    case "table":
-    case "comparison":
-      return { type: b.t, scope, block: b } as Figure
-    default:
-      return { type: "unknown", scope, block: b } as Figure
-  }
+  // The figure union falls back to a loose block, so a half-filled chart still
+  // says t "chart". Re-parse with the type's own schema and treat anything that
+  // fails as unknown (head only), so one broken figure never breaks the page.
+  const strict = { timeline: TimelineBlock, chart: ChartBlock, table: TableBlock, comparison: ComparisonBlock }[b.t as string]
+  const parsed = strict?.safeParse(b)
+  if (parsed?.success) return { type: b.t, scope, block: parsed.data } as Figure
+  return { type: "unknown", scope, block: b } as Figure
 }
 
 // Human-readable figure text only. Never ids, keys or JSON, so an id such as

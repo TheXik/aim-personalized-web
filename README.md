@@ -31,9 +31,9 @@ Set up and run the Aim personalised brief prototype on this machine, then show i
    AZURE_OPENAI_API_KEY=
    CHAT_LIVE=1
    I will paste my Azure OpenAI key after the `=` myself. If I give you no key, leave it empty: the app then runs offline and the chat uses built-in shortcuts. Never print the key, never put it anywhere else, never commit `.env.local`.
-6. Run `pnpm test`. It makes no model calls. Every test should pass.
+6. Run `pnpm test`. It makes no model calls. No test should fail. Without the briefs, the tests that need them are skipped.
 7. Start the app in the background with `pnpm dev --port 3737` and wait until http://localhost:3737 answers. Keep it running.
-8. Check that each reader page returns HTTP 200, then open all three in my browser (on macOS: `open <url>`):
+8. Check that each brief loads: `curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3737/api/briefs/<reader>` for `space-launch`, `enterprise-ai` and `cz-sk-ai` should print 200 (404 means the brief files are missing). The pages themselves always return 200 because they load the brief in the browser. Then open all three pages in my browser (on macOS: `open <url>`):
    http://localhost:3737/r/space-launch
    http://localhost:3737/r/enterprise-ai
    http://localhost:3737/r/cz-sk-ai
@@ -53,7 +53,7 @@ cd aim-personalized-web
 pnpm install                  # an "ignored build scripts" warning is expected
 cp /path/to/assignment/brief-*.json data/briefs/   # the three briefs, names unchanged
 cp .env.example .env.local
-pnpm test                     # no model calls
+pnpm test                     # no model calls. Without the briefs, their tests are skipped
 pnpm dev                      # http://localhost:3000
 ```
 
@@ -93,7 +93,7 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 - **Daily cap.** At most $0.10 per UTC day by default. `MODEL_BUDGET_USD` can change it, never above $0.20. Each call reserves its worst-case cost before it is sent (prompt bytes as an upper bound on input tokens, 2,000 output tokens, list price plus 20%), and a call that could cross the cap is never sent. After the call the reservation is settled to the real cost.
 - **Where spend is counted.** In `.model-spend.json` locally and in a Cloudflare D1 table on the live site. If there is no safe place to count, no call is made.
 - **Rate limits.** 8 chat requests per minute per client, 30 model calls per minute across all clients, requests capped at 500 characters, 15 second timeout, no automatic retries.
-- **Eval.** `pnpm eval` runs the 75 research requests offline for free. The live run (`EVAL_APPROVED=1 pnpm eval -- --live`) prints its call count first and refuses to start without that flag.
+- **Eval.** `pnpm eval` runs the 75 research requests offline for free. It needs the briefs in `data/briefs/` and says it skipped otherwise. The live run (`EVAL_APPROVED=1 pnpm eval -- --live`) prints its call count first and refuses to start without that flag.
 
 ## Project map
 

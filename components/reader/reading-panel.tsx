@@ -79,9 +79,9 @@ export function ReadingPanel({
 
   const position =
     reading.kind === "story" && storyIndex >= 0
-      ? `Item ${storyIndex + 1} of ${order.length}`
+      ? `Story ${storyIndex + 1} of ${order.length}`
       : reading.kind === "thread"
-        ? "Thread"
+        ? "Current"
         : "More this week"
 
   return (
@@ -120,7 +120,15 @@ export function ReadingPanel({
 
       <div className="rp__scroll" ref={scroller} onScroll={onScroll}>
         {story ? (
-          <StoryBody story={story} parts={parts} showUpdates={showUpdates} heading={heading} threads={threads} onOpen={onOpen} />
+          <StoryBody
+            story={story}
+            parts={parts}
+            showUpdates={showUpdates}
+            heading={heading}
+            threads={threads}
+            order={order}
+            onOpen={onOpen}
+          />
         ) : thread ? (
           <ThreadBody thread={thread} order={order} parts={parts} heading={heading} onOpen={onOpen} index={threads.indexOf(thread)} />
         ) : reading.kind === "more" ? (
@@ -132,7 +140,7 @@ export function ReadingPanel({
         )}
         {story && next ? (
           <button type="button" className="rp__next" onClick={() => onOpen({ kind: "story", key: next.key })}>
-            <span className="rp__nextlabel">Next</span>
+            <span className="rp__nextlabel">Next in this brief</span>
             <span className="rp__nexthl">{next.headline}</span>
             <Arrow dir="right" />
           </button>
@@ -148,6 +156,7 @@ function StoryBody({
   showUpdates,
   heading,
   threads,
+  order,
   onOpen,
 }: {
   story: Item
@@ -155,8 +164,12 @@ function StoryBody({
   showUpdates: boolean
   heading: React.RefObject<HTMLHeadingElement | null>
   threads: Current[]
+  order: Item[]
   onOpen: (r: Reading) => void
 }) {
+  const visible = new Set(order.map((i) => i.key))
+  const thread = story.current ? threads.find((t) => t.label === story.current) : undefined
+  const onlyStory = !!thread && thread.itemKeys.filter((k) => visible.has(k)).length === 1
   const paragraphs = parts.paragraphs === "none" ? [] : parts.paragraphs === "first" ? story.paragraphs.slice(0, 1) : story.paragraphs
   const threadIndex = story.current ? threads.findIndex((t) => t.label === story.current) : -1
   return (
@@ -189,10 +202,11 @@ function StoryBody({
       ))}
       {story.current && threadIndex >= 0 ? (
         <button type="button" className="rp__thread" onClick={() => onOpen({ kind: "thread", label: story.current as string })}>
-          <span className="eyebrow">Part of thread {String(threadIndex + 1).padStart(2, "0")}</span>
+          <span className="eyebrow">Part of current {String(threadIndex + 1).padStart(2, "0")}</span>
           <span className="rp__threadlabel">{story.current}</span>
         </button>
       ) : null}
+      {onlyStory ? <p className="rp__note">This current has one story this week.</p> : null}
       {story.scope && story.scope !== "Other" && story.scope.length > 24 ? (
         <p className="rp__area">
           <span className="eyebrow">Your monitoring area</span> {story.scope}
@@ -297,9 +311,9 @@ export function Sources({ links }: { links: Link[]; label?: string }) {
   const signals = links.filter((l) => l.id.startsWith("sig_"))
   return (
     <div className="src">
-      {updates.length > 0 ? <span className="eyebrow src__label">{updates.length === 1 ? "Update" : "Updates"}</span> : null}
+      {updates.length > 0 ? <span className="eyebrow src__label">{updates.length === 1 ? "Source" : "Sources"}</span> : null}
       {updates.map((l, i) => (
-        <a key={l.id} className="src__chip" href={l.href} target="_blank" rel="noreferrer" aria-label={`Update ${i + 1}, opens in Aim`}>
+        <a key={l.id} className="src__chip" href={l.href} target="_blank" rel="noreferrer" aria-label={`Source ${i + 1}, opens in Aim`}>
           {i + 1}
         </a>
       ))}
@@ -317,10 +331,10 @@ export function ReadTheUpdates({ updates }: { updates: Citation[] }) {
     <div className="updates">
       <span className="eyebrow">Read the updates</span>
       <ul className="updates__list">
-        {updates.map((u) => (
+        {[...updates].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")).map((u) => (
           <li key={u.id}>
             <a className="upd" href={u.href} target="_blank" rel="noreferrer">
-              <span className={`upd__sev upd__sev--${u.severity}`} aria-hidden="true" />
+              <span className={`upd__sev upd__sev--${u.severity}`} title={`Aim severity: ${u.severity}`} aria-hidden="true" />
               <span className="upd__title">
                 {u.title}
                 {u.subtitle ? <span className="upd__sub">{u.subtitle}</span> : null}

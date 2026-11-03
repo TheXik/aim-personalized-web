@@ -104,7 +104,7 @@ function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Op
         ) : (
           <span className="fp__count">
             {threads > 0 ? `${threads} ${threads === 1 ? "current" : "currents"} · ` : ""}
-            {items} {items === 1 ? "item" : "items"}
+            {items} {items === 1 ? "story" : "stories"}
           </span>
         )}
       </div>

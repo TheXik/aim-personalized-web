@@ -117,4 +117,11 @@ describe("HX05 a section name that states a claim", () => {
     expect(r.rejected[0].reasons[0].kind).toBe("not_reader_words")
     expect(looksLikeClaim("Quick reads")).toBe(false)
   })
+
+  it("rejects a rename the reader did not type word for word", () => {
+    const request = "rename the In brief section"
+    const r = applyOps(DEFAULT_SPEC, [{ op: "rename", section: "brief", text: "SpaceX went bankrupt" }], { brief: space, request })
+    expect(r.spec).toEqual(DEFAULT_SPEC)
+    expect(r.rejected[0].reasons[0].kind).toBe("not_reader_words")
+  })
 })

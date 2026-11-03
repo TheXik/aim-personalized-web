@@ -12,26 +12,33 @@ import { Edit } from "@/lib/view/ops"
 const MAX_BODY_BYTES = 16_000
 const WINDOW_MS = 60_000
 const MAX_PER_CLIENT = 8
-// The client key comes from x-forwarded-for, which a caller can spoof. So a
-// global cap bounds total model calls per minute whatever the header says.
-const MAX_GLOBAL = 30
+// Model calls across all clients. Counted only right before a real call, so
+// offline turns never use it up. Over the cap the turn falls back to the
+// built-in shortcuts instead of failing.
+const MAX_MODEL_CALLS = 30
 const MAX_KEYS = 1_000
 const hits = new Map<string, number[]>()
-let globalHits: number[] = []
+let modelCalls: number[] = []
 
-// In-memory limits. Enough for a demo on one server, not for production.
-function allow(key: string): boolean {
+// In-memory limits, enough for a demo on one server. The client key uses the
+// first x-forwarded-for entry, which a caller can spoof, so the model budget
+// is protected by the global model-call cap, not by this key.
+function allowClient(key: string): boolean {
   const now = Date.now()
-  globalHits = globalHits.filter((t) => now - t < WINDOW_MS)
-  if (globalHits.length >= MAX_GLOBAL) return false
   const recent = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS)
   if (recent.length >= MAX_PER_CLIENT) return false
   recent.push(now)
-  globalHits.push(now)
   hits.delete(key)
   hits.set(key, recent)
-  // Bounded memory: drop the oldest keys (Map keeps insertion order).
   while (hits.size > MAX_KEYS) hits.delete(hits.keys().next().value!)
+  return true
+}
+
+function takeModelCall(): boolean {
+  const now = Date.now()
+  modelCalls = modelCalls.filter((t) => now - t < WINDOW_MS)
+  if (modelCalls.length >= MAX_MODEL_CALLS) return false
+  modelCalls.push(now)
   return true
 }
 
@@ -59,7 +66,7 @@ export async function POST(req: Request) {
   if (!brief) return Response.json({ error: "unknown_reader" }, { status: 404 })
 
   const client = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
-  if (!allow(`${body.reader}:${client}`)) {
+  if (!allowClient(`${body.reader}:${client}`)) {
     return Response.json({ error: "rate_limited", reply: "That's a lot of changes at once. Give it a minute." }, { status: 429 })
   }
 
@@ -70,6 +77,7 @@ export async function POST(req: Request) {
       brief,
       callModel: async (userPrompt): Promise<ModelResult> => {
         if (offlineMode()) return { ok: false, reason: "error" }
+        if (!takeModelCall()) return { ok: false, reason: "rate_limited" }
         const r = await callStructured({ label: "chat", system: prompt, prompt: userPrompt, schema: Edit })
         return r.ok ? { ok: true, output: r.output } : { ok: false, reason: r.reason }
       },

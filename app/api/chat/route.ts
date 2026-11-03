@@ -63,8 +63,11 @@ export async function POST(req: Request) {
   const brief = await loadBrief(body.reader)
   if (!brief) return Response.json({ error: "missing_brief", reply: MISSING_BRIEF_MESSAGE }, { status: 404 })
 
-  // Cloudflare sets cf-connecting-ip itself. Elsewhere fall back to x-forwarded-for.
-  const client = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
+  // On Workers, Cloudflare overwrites cf-connecting-ip, so it is trusted only there.
+  // Elsewhere (local dev) any header is caller-set. The real bounds are the
+  // password gate and the D1 spend cap, this limiter only slows one client.
+  const onWorkers = typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers"
+  const client = (onWorkers ? req.headers.get("cf-connecting-ip") : null) ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local"
   if (!allowClient(`${body.reader}:${client}`)) {
     return Response.json({ error: "rate_limited", reply: "That's a lot of changes at once. Give it a minute." }, { status: 429 })
   }

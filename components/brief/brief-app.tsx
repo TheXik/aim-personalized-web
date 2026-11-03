@@ -160,6 +160,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           offer?: Offer | null
           askAi?: { question?: unknown } | null
           contact?: ContactOffer | null
+          source?: unknown
         }
         if (!res.ok && typeof data.reply !== "string") throw new Error(String(res.status))
         if (res.ok && data.changed === true && data.spec) {
@@ -173,7 +174,14 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           ...splitReply(typeof data.reply === "string" ? data.reply : ""),
           offer: res.ok && data.offer && Array.isArray(data.offer.ops) ? { label: String(data.offer.label), ops: data.offer.ops } : null,
           request: text,
-          askAi: res.ok && data.askAi && typeof data.askAi.question === "string" ? { question: data.askAi.question } : null,
+          // Every refusal leaves something to click: the server's question for "Ask your own AI",
+          // or, when nothing was applied and nothing is offered, the reader's own words.
+          askAi:
+            res.ok && data.askAi && typeof data.askAi.question === "string"
+              ? { question: data.askAi.question }
+              : !(res.ok && data.changed === true) && !(res.ok && data.offer) && (!res.ok || data.source === "none")
+                ? { question: text }
+                : null,
           contact: res.ok && data.contact && (data.contact.when === "now" || data.contact.when === "after") ? data.contact : null,
         }
         // Consecutive turns the chat could not do. The server uses it to spot frustration.
@@ -191,7 +199,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           steps: [],
           offer: null,
           request: text,
-          askAi: null,
+          askAi: { question: text },
           contact: null,
         }
       } finally {

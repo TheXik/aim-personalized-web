@@ -76,7 +76,7 @@ export function ReadingPanel({
 
   const position =
     reading.kind === "story" && storyIndex >= 0
-      ? `Story ${storyIndex + 1} of ${order.length}`
+      ? `Item ${storyIndex + 1} of ${order.length}`
       : reading.kind === "thread"
         ? "Thread"
         : "More this week"
@@ -161,7 +161,8 @@ function StoryBody({
       <div className="rp__meta">
         <StatusMark status={story.status} raw={story.statusRaw} />
         {story.date ? <span>{formatDay(story.date)}</span> : null}
-        {story.scope ? <span className="rp__scope">{story.scope}</span> : null}
+        {/* Short area names (SpaceX) work as a kicker. Question-style areas move under the story. */}
+        {story.scope && story.scope !== "Other" && story.scope.length <= 24 ? <span className="rp__scope">{story.scope}</span> : null}
       </div>
       <h2 className="rp__headline" id="rp-h" ref={heading} tabIndex={-1}>
         {story.headline}
@@ -187,6 +188,11 @@ function StoryBody({
           <span className="eyebrow">Part of thread {String(threadIndex + 1).padStart(2, "0")}</span>
           <span className="rp__threadlabel">{story.current}</span>
         </button>
+      ) : null}
+      {story.scope && story.scope !== "Other" && story.scope.length > 24 ? (
+        <p className="rp__area">
+          <span className="eyebrow">Your monitoring area</span> {story.scope}
+        </p>
       ) : null}
       {parts.sources && story.sources.length > 0 ? <Sources links={story.sources} /> : null}
       {showUpdates && story.updates.length > 0 ? <ReadTheUpdates updates={story.updates} /> : null}

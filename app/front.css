@@ -370,29 +370,45 @@
 @media (min-width: 1024px) {
   .fp__row--base { flex: 1 1 0; min-height: 0; align-items: stretch; }
   .fp__also { display: flex; flex-direction: column; min-height: 0; }
-  .fp__also .also { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .fp__also .also { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
   .fp__figure { align-self: start; }
 }
 
 /* ---------- Scrollbars: thin, warm, and only there while you use them ---------- */
 
-.rp__scroll, .chat__scroll {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 300ms var(--ease-standard);
-}
-.rp__scroll:hover, .chat__scroll:hover, .rp__scroll:focus-within, .chat__scroll:focus-within {
-  scrollbar-color: #d6d2cf transparent;
-}
+/* No scrollbars anywhere. The reading panel shows where you are with its progress line,
+   lists that run long fade out at the bottom. */
+.rp__scroll, .chat__scroll { scrollbar-width: none; }
+.rp__scroll::-webkit-scrollbar, .chat__scroll::-webkit-scrollbar { display: none; }
 /* The front page is one screen: no scrollbars on it at all. An opened dropdown that makes the
    list longer than its space scrolls inside the list, with a soft fade that says there is more. */
 .fp, .fp__also .also { scrollbar-width: none; }
 .fp::-webkit-scrollbar, .fp__also .also::-webkit-scrollbar { display: none; }
 .also[data-more] { mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
-/* Engines without scrollbar-color (older Safari): the same thin, rounded thumb. */
-@supports not (scrollbar-color: auto) {
-  .rp__scroll::-webkit-scrollbar, .chat__scroll::-webkit-scrollbar { width: 10px; }
-  .rp__scroll::-webkit-scrollbar-thumb, .chat__scroll::-webkit-scrollbar-thumb { background: #d6d2cf; border-radius: 999px; border: 3px solid var(--background); }
-  .rp__scroll::-webkit-scrollbar-track, .chat__scroll::-webkit-scrollbar-track { background: transparent; }
+@media (prefers-reduced-motion: reduce) { .rp__bar::after { transition: none; } }
+
+/* ---------- Phone first screen: the week, the verdict's first sentence, and the first story above the fold ---------- */
+
+.fp__verdict-more { display: none; }
+.rp__area { margin: 20px 0 0; font-size: 13px; line-height: 1.5; color: var(--b-muted); }
+.rp__area .eyebrow { display: block; margin-bottom: 2px; }
+@media (max-width: 599px) {
+  .tb__date { display: inline; padding-left: 0; border-left: 0; margin-left: auto; }
+  .tb__spacer, .tb .top__btn { display: none; }
+  .fp__verdict { font-size: 23px; line-height: 1.25; }
+  .fp__verdict:not([data-more]) .fp__verdict-rest { display: none; }
+  .fp__verdict-more {
+    display: inline-block; margin-top: 8px; padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 500; color: var(--b-meta);
+    text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px;
+  }
+  .fp__start { margin-top: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .rp__scroll, .chat__scroll { transition: none; } .rp__bar::after { transition: none; } }
+
+/* "Your view" chips: long rule names wrap inside the chip instead of overlapping the next one. */
+.vc .chip {
+  height: auto; min-height: 28px; max-width: 100%; padding: 5px 6px 5px 11px; border-radius: 14px;
+  align-items: flex-start; line-height: 1.4;
+}
+.vc .chip__meta { white-space: nowrap; line-height: 18px; }
+.vc .chip__x { flex: none; margin-top: -1px; }

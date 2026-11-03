@@ -133,7 +133,7 @@ export function ChatPanel({
         {status}
       </p>
       <div className="chat__scroll" ref={scroller}>
-        <p className="chat__sub">Say it in plain words. Next week&apos;s brief opens the same way.</p>
+        <p className="chat__sub">Say it in plain words. Saved on this device, so next week&apos;s brief opens the same way here.</p>
         {viewControls}
         {turns.length === 0 ? (
           <div className="chat__intro">

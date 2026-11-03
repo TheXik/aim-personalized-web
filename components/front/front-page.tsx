@@ -42,7 +42,7 @@ export function FrontPage({
         <AlsoThisWeek
           items={also}
           groupOf={fp.groupOf}
-          title={fp.alsoTitle ?? (fp.grouped ? `Also this week, by ${groupWord(view)}` : "Also this week")}
+          title={fp.alsoTitle ?? (fp.grouped && groupsShown(also, fp.groupOf) >= 2 ? `Also this week, by ${groupWord(view)}` : "Also this week")}
           foldOneLiners={view.parts.oneLiners === "collapsed"}
           threads={fp.threads}
           onOpen={onOpen}
@@ -57,6 +57,10 @@ export function FrontPage({
 function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Open }) {
   const first = fp.order[0]
   const threads = fp.threads.length
+  const items = fp.order.length
+  // On a phone only the first sentence shows, the rest is one tap away (CSS hides it on wide screens never).
+  const [more, setMore] = useState(false)
+  const [lead, rest] = splitFirstSentence(view.verdict)
   return (
     <section className="fp__lead" aria-labelledby="fp-verdict">
       {/* When the reader's filters leave nothing, say so here, on the same line, and show the full brief. */}
@@ -67,9 +71,15 @@ function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Op
       ) : (
         <p className="eyebrow fp__kicker">Your market brief</p>
       )}
-      <h1 className="fp__verdict" id="fp-verdict">
-        {view.verdict}
+      <h1 className="fp__verdict" id="fp-verdict" data-more={more ? "open" : undefined}>
+        {lead}
+        {rest ? <span className="fp__verdict-rest"> {rest}</span> : null}
       </h1>
+      {rest && !more ? (
+        <button type="button" className="fp__verdict-more" onClick={() => setMore(true)}>
+          Read the full summary
+        </button>
+      ) : null}
       <div className="fp__start">
         {first ? (
           <button type="button" className="fp__btn" onClick={() => onOpen({ kind: "story", key: first.key })}>
@@ -78,7 +88,7 @@ function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Op
         ) : null}
         <span className="fp__count">
           {threads > 0 ? `${threads} ${threads === 1 ? "thread" : "threads"} · ` : ""}
-          {view.readingMinutes} min
+          {items} {items === 1 ? "item" : "items"} · {view.readingMinutes} min
         </span>
       </div>
     </section>
@@ -115,7 +125,7 @@ function Threads({ threads, order, title, onOpen }: { threads: Current[]; order:
     <section className="fp__threads" aria-labelledby="fp-threads-t">
       <div className="fp__head">
         <h2 className="eyebrow fp__label" id="fp-threads-t">
-          {title === "This week's threads" || title === "This week’s threads" ? "Threads you follow" : title}
+          {title === "This week's threads" || title === "This week’s threads" ? "Threads we track for you" : title}
         </h2>
         <span className="fp__hint">Open a thread to read it</span>
       </div>
@@ -130,9 +140,9 @@ function Threads({ threads, order, title, onOpen }: { threads: Current[]; order:
               <span className="card__meta">
                 <span className={`card__status card__status--${c.status}`}>
                   <span className="card__dot" aria-hidden="true" />
-                  {c.status === "other" ? c.statusRaw.replace(/_/g, " ") : c.status === "carried" ? "carried over" : c.status}
+                  {threadStatus(c)}
                 </span>
-                {c.sinceLabel ? <span className="card__age">{c.sinceLabel}</span> : null}
+                {threadAge(c) ? <span className="card__age">{threadAge(c)}</span> : null}
               </span>
               <span className="card__label">{c.label}</span>
               <span className="card__line">{c.line}</span>
@@ -260,6 +270,31 @@ function Chevron() {
       <path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
+}
+
+function groupsShown(items: Item[], groupOf: Record<string, string>): number {
+  return new Set(items.map((i) => groupOf[i.key]).filter(Boolean)).size
+}
+
+/** "New", "Updated this week", "Carried over": what changed this week, in words. */
+function threadStatus(c: Current): string {
+  if (c.status === "new") return c.sinceLabel === "this week" ? "New this week" : "New"
+  if (c.status === "updated") return "Updated this week"
+  if (c.status === "carried") return "Carried over"
+  return c.statusRaw.replace(/_/g, " ")
+}
+
+/** "running four weeks": how long the thread has run, so it never reads as a contradiction with "new". */
+function threadAge(c: Current): string | null {
+  if (!c.sinceLabel || c.sinceLabel === "this week") return null
+  return `running ${c.sinceLabel}`
+}
+
+/** Splits the verdict after its first sentence. The words stay exactly as the brief wrote them. */
+export function splitFirstSentence(text: string): [string, string] {
+  const m = /^(.+?[.!?])\s+(?=[A-Z“"‘'0-9])/.exec(text)
+  if (!m) return [text, ""]
+  return [m[1], text.slice(m[0].length)]
 }
 
 function groupWord(view: PageView): string {

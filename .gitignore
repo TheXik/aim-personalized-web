@@ -54,3 +54,6 @@ data/briefs/brief-*.json
 .open-next
 .wrangler
 .dev.vars
+
+# Local decline log (production keeps it in D1)
+.declines.jsonl

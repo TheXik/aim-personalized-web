@@ -13,6 +13,8 @@
 
 // USD per token, gpt-5-mini Azure Global list price (research 05), times 1.2
 // in case the deployment is Data Zone, which is priced about 20% higher.
+import { onWorkers, spendDb, type D1 } from "../infra/cloudflare"
+
 const SAFETY = 1.2
 const PRICE = { input: (0.25 / 1e6) * SAFETY, cached: (0.025 / 1e6) * SAFETY, output: (2.0 / 1e6) * SAFETY }
 
@@ -21,7 +23,6 @@ const PRICE = { input: (0.25 / 1e6) * SAFETY, cached: (0.025 / 1e6) * SAFETY, ou
 // never above 10 dollars. The production value itself is set in wrangler.jsonc.
 const DEV_CEILING_USD = 0.2
 const PROD_CEILING_USD = 10
-const onWorkers = () => typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers"
 export const ceilingUsd = () => (onWorkers() ? PROD_CEILING_USD : DEV_CEILING_USD)
 export const capUsd = () => Math.min(Number(process.env.MODEL_BUDGET_USD ?? 0.1) || 0.1, ceilingUsd())
 
@@ -36,9 +37,6 @@ interface Store {
 }
 
 // ---------- D1 (Cloudflare) ----------
-
-type D1Stmt = { bind(...v: unknown[]): D1Stmt; run(): Promise<{ meta: { changes: number } }>; first<T>(): Promise<T | null> }
-type D1 = { prepare(sql: string): D1Stmt; batch(stmts: D1Stmt[]): Promise<unknown> }
 
 function d1Store(db: D1): Store {
   const ensure = (day: string) =>
@@ -64,13 +62,8 @@ function d1Store(db: D1): Store {
 }
 
 async function cloudflareStore(): Promise<Store | null> {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare")
-    const env = (await getCloudflareContext({ async: true })).env as unknown as Record<string, unknown>
-    return env.MODEL_SPEND_DB ? d1Store(env.MODEL_SPEND_DB as D1) : null
-  } catch {
-    return null
-  }
+  const db = await spendDb()
+  return db ? d1Store(db) : null
 }
 
 // ---------- Local file (dev and tests) ----------

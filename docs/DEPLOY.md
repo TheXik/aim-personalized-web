@@ -46,6 +46,14 @@ Run in `~/code/work/AIM-startup/task/aim-personalized-web`, on `main`, with the 
    Then sign in once in a browser and send one chat message. `pnpm exec wrangler tail` shows one `llm_call` line per message.
 
 **Roll back:** `pnpm exec wrangler rollback`.
+**What readers asked for that the chat could not do:** every decline (a question, a "not supported" or a change that failed the checks) is logged with the request text, reader page, reason and time, and no IP, in the `declines` table of the same D1 database. Read it with:
+
+```bash
+pnpm exec wrangler d1 execute aim-model-spend --remote --command "SELECT ts, reader, reason, frustrated, request FROM declines ORDER BY ts DESC LIMIT 50"
+```
+
+Locally the same rows go to the git-ignored `.declines.jsonl`.
+
 **Kill switch for the model:** `pnpm exec wrangler secret delete AZURE_OPENAI_API_KEY`, which takes effect at once because no build carries the key. Or set `CHAT_LIVE` to `"0"` in `wrangler.jsonc` and run `pnpm cf:deploy`. Either way the chat keeps working on its offline shortcuts.
 
 ## Publishing the repo (submission day)

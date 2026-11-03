@@ -3,6 +3,7 @@ import { MISSING_BRIEF_MESSAGE } from "@/lib/brief/messages"
 import { loadBrief } from "@/lib/brief/load"
 import { isReaderSlug } from "@/lib/brief/schema"
 import { handleChat, type ModelResult } from "@/lib/chat/handle"
+import { logDecline } from "@/lib/infra/declines"
 import { Edit } from "@/lib/view/ops"
 import VIEW_EDITOR_PROMPT from "@/prompts/view-editor.md"
 
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
   if (Number(req.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) return Response.json({ error: "too_large" }, { status: 413 })
   const text = await req.text()
   if (text.length > MAX_BODY_BYTES) return Response.json({ error: "too_large" }, { status: 413 })
-  let body: { reader?: unknown; request?: unknown; spec?: unknown }
+  let body: { reader?: unknown; request?: unknown; spec?: unknown; declinesInARow?: unknown }
   try {
     body = JSON.parse(text)
   } catch {
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
   }
 
   const res = await handleChat(
-    { request: body.request, spec: body.spec },
+    { request: body.request, spec: body.spec, declinesInARow: body.declinesInARow },
     {
       brief,
       callModel: async (userPrompt): Promise<ModelResult> => {
@@ -85,6 +86,7 @@ export async function POST(req: Request) {
         return r.ok ? { ok: true, output: r.output } : { ok: false, reason: r.reason }
       },
       log: (entry) => console.info(JSON.stringify({ reader: body.reader, ...entry })),
+      logDecline: (d) => logDecline({ ...d, reader: String(body.reader) }),
     },
   )
   return Response.json(res)

@@ -82,7 +82,8 @@
   margin-top: 40px; padding: 16px 0 0; border: 0; border-top: 1px solid var(--b-line); background: none; text-align: left; cursor: pointer; font: inherit; color: var(--b-meta);
 }
 .rp__nextlabel { font-family: var(--b-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--b-faint); }
-.rp__nexthl { font-size: 14.5px; font-weight: 500; color: var(--b-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp__nexthl { font-size: 14.5px; font-weight: 500; color: var(--b-title); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rp__tier { margin: 0 0 8px; }
 .rp__next:hover .rp__nexthl { text-decoration: underline; text-decoration-color: var(--b-faint); text-underline-offset: 3px; }
 
 /* Every stacked layout (below 1024px, as in brief-app.tsx): a full-screen sheet that slides up. */

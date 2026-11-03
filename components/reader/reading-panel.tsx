@@ -11,6 +11,9 @@ import { StatusMark } from "@/components/brief/kicker"
 // the front page on a laptop and is a full-screen sheet on a phone. The front page
 // never grows. All metadata (sources, dates, areas) lives here.
 
+// The brief's own tier names, as in Aim's email.
+const TIER_NAME = { detail: "In detail", brief: "In brief", one_liner: "Also this week" } as const
+
 export type Reading = { kind: "story"; key: string } | { kind: "thread"; label: string } | { kind: "more" }
 
 export function ReadingPanel({
@@ -158,6 +161,7 @@ function StoryBody({
   const threadIndex = story.current ? threads.findIndex((t) => t.label === story.current) : -1
   return (
     <article className="rp__story" aria-labelledby="rp-h">
+      <p className="eyebrow rp__tier">{TIER_NAME[story.tier]}</p>
       <div className="rp__meta">
         <StatusMark status={story.status} raw={story.statusRaw} />
         {story.date ? <span>{formatDay(story.date)}</span> : null}
@@ -169,7 +173,7 @@ function StoryBody({
       </h2>
       {parts.means && story.means ? (
         <p className="means">
-          <strong>What it means.</strong> {story.means}
+          <strong>What it means for you.</strong> {story.means}
         </p>
       ) : null}
       {paragraphs.slice(0, 1).map((p, i) => (
@@ -246,7 +250,7 @@ function ThreadBody({
         </ul>
         {hidden > 0 ? <p className="rp__note">{hidden === 1 ? "1 more story is hidden by your view." : `${hidden} more stories are hidden by your view.`}</p> : null}
       </div>
-      {parts.sources && thread.sources.length > 0 ? <Sources links={thread.sources} label="Signals" /> : null}
+      {parts.sources && thread.sources.length > 0 ? <Sources links={thread.sources} /> : null}
     </article>
   )
 }
@@ -284,21 +288,24 @@ function MoreBody({
   )
 }
 
-export function Sources({ links, label = "Sources" }: { links: Link[]; label?: string }) {
+/**
+ * Links into Aim, worded as in Aim's email: updates as numbered chips,
+ * signals as "Open the signal ›". Every link opens the exact item in Aim's app.
+ */
+export function Sources({ links }: { links: Link[]; label?: string }) {
+  const updates = links.filter((l) => !l.id.startsWith("sig_"))
+  const signals = links.filter((l) => l.id.startsWith("sig_"))
   return (
     <div className="src">
-      <span className="eyebrow src__label">{label}</span>
-      {links.map((l, i) => (
-        <a
-          key={l.id}
-          className="src__chip"
-          href={l.href}
-          target="_blank"
-          rel="noreferrer"
-          title={`Open ${l.id.startsWith("sig_") ? "the signal" : "the update"} in Aim`}
-          aria-label={`${label} ${i + 1}, opens in Aim`}
-        >
+      {updates.length > 0 ? <span className="eyebrow src__label">{updates.length === 1 ? "Update" : "Updates"}</span> : null}
+      {updates.map((l, i) => (
+        <a key={l.id} className="src__chip" href={l.href} target="_blank" rel="noreferrer" aria-label={`Update ${i + 1}, opens in Aim`}>
           {i + 1}
+        </a>
+      ))}
+      {signals.map((l, i) => (
+        <a key={l.id} className="src__signal" href={l.href} target="_blank" rel="noreferrer">
+          {signals.length === 1 ? "Open the signal ›" : `Open signal ${i + 1} ›`}
         </a>
       ))}
     </div>

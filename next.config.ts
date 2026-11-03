@@ -16,6 +16,8 @@ const csp = [
 ].join("; ")
 
 const nextConfig: NextConfig = {
+  // No Next.js dev badge on the page, so demos look like the real thing.
+  devIndicators: false,
   poweredByHeader: false,
   // The reader page moved from /r/<reader> to /brief/<reader>. Old links keep
   // working through a permanent redirect, which runs before the password gate.

@@ -25,7 +25,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
     it("opens with the fixed instruction line and the brief's dates", () => {
       const first = md(space).split("\n")[0]
       expect(first).toBe(
-        "This is my weekly market brief from Aim for Sep 21 to 28, 2026. Use only the facts below and cite the links when you answer.",
+        "This is my weekly market brief from Aim for Sep 21 to Sep 28, 2026. Use only the facts below and cite the links when you answer.",
       )
     })
 

@@ -26,6 +26,8 @@ export type FrontPage = {
   groupOf: Record<string, string>
   // The reader's own name for the one-liners section ("Also this week" by default), if they renamed it.
   alsoTitle: string | null
+  // Minutes to read what this reader's view shows (verdict, currents and visible items), at 230 words a minute.
+  readingMinutes: number
 }
 
 export const MAX_TAKEAWAYS = 2
@@ -80,7 +82,20 @@ export function buildFrontPage(view: PageView): FrontPage {
   const taken = new Set(takeaways.map((t) => t.item.key))
   const also = order.filter((i) => !taken.has(i.key) && !(i.current && threadLabels.has(i.current)))
 
+  const words = (t: string | null | undefined) => (t ? t.trim().split(/\s+/).filter(Boolean).length : 0)
+  let count = words(view.verdict) + threads.reduce((n, c) => n + words(c.label) + words(c.line), 0)
+  for (const i of order) {
+    count += words(i.headline)
+    if (view.parts.means) count += words(i.means)
+    if (i.tier !== "one_liner") {
+      const ps = view.parts.paragraphs === "none" ? [] : view.parts.paragraphs === "first" ? i.paragraphs.slice(0, 1) : i.paragraphs
+      for (const para of ps) count += words(para)
+    }
+  }
+  const readingMinutes = Math.max(1, Math.round(count / 230))
+
   return {
+    readingMinutes,
     topStory,
     takeaways,
     hook,

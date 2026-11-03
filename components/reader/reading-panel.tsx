@@ -124,7 +124,12 @@ export function ReadingPanel({
               >
                 Next ›
               </button>
-            ) : null}
+            ) : (
+              // The last story: finish and go back to the front page.
+              <button type="button" className="rp__step" onClick={onClose}>
+                End reading
+              </button>
+            )}
           </>
         ) : null}
         <button type="button" className="rp__close" aria-label="Close and go back to the front page" onClick={onClose}>

@@ -123,3 +123,12 @@
 .rp__close { width: 36px; height: 36px; }
 /* Narrow panels: the position label gives way before the buttons do. */
 @media (max-width: 599px) { .rp__pos { display: none; } .rp__step { padding: 0 12px; } }
+
+/* The front page behind the panel: dimmed, with a light blur where the browser supports it.
+   Plain dim where blur is unsupported or the reader asked for less transparency. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .rp-scrim { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .rp-scrim { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(20, 19, 15, 0.28); }
+}

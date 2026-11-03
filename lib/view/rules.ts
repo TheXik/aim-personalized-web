@@ -82,11 +82,28 @@ export function currentLabels(rule: Rule): string[] {
   }
 }
 
+// A rule is inactive this week when it can only match through threads that are
+// gone. Recursive, so "the pricing thread OR mentions pricing" stays active when
+// the thread is renamed, while "the pricing thread AND has numbers" goes inactive.
 export function isThreadInactive(rule: Rule, brief: Brief): boolean {
-  const labels = currentLabels(rule)
-  if (labels.length === 0) return false
   const present = new Set(brief.currents.map((c) => fold(c.label)))
-  return !labels.some((l) => present.has(fold(l)))
+  const gone = (r: Rule): boolean => {
+    switch (r.op) {
+      case "eq":
+      case "in": {
+        if (r.field !== "current") return false
+        const vs = r.op === "eq" ? [r.value] : r.values
+        return !vs.some((v) => present.has(fold(v)))
+      }
+      case "and":
+        return r.args.some(gone)
+      case "or":
+        return r.args.length > 0 && r.args.every(gone)
+      default:
+        return false // contains, has_number, and "not" can still match
+    }
+  }
+  return gone(rule)
 }
 
 // Validation against this week's brief and the reader's own message.

@@ -421,3 +421,34 @@ describe("a half-filled figure never breaks the page", () => {
     expect(() => buildView(b, DEFAULT_SPEC)).not.toThrow()
   })
 })
+
+describe("eval triage fixes", () => {
+  it("EA13: a this-week 'only X' that matches nothing is refused, the page stays", async () => {
+    const r = await handleChat(
+      { request: "only the Zeppelin story this week", spec: DEFAULT_SPEC },
+      { brief: orbital, callModel: async () => ({ ok: true, output: { ops: [{ op: "filter", mode: "keep", where: { op: "has_number" }, duration: "standing" }, { op: "filter", mode: "keep", where: { op: "and", args: [{ op: "eq", field: "tier", value: "detail" }, { op: "eq", field: "figure", value: "none" }] }, duration: "this_week" }] } }) },
+    )
+    expect(r.spec.filters).toHaveLength(1)
+    expect(r.reply).toMatch(/Nothing in this week's brief matches that/)
+  })
+
+  it("thread lifetime is recursive: OR with a text rule survives a renamed thread, AND does not", () => {
+    const raw = rawSynthetic("orbital") as { recap: { id: string; doc: { currents: { label: string }[] } } }
+    const label = raw.recap.doc.currents[1].label
+    raw.recap.doc.currents[1].label = "Renamed"
+    const next = normalizeBrief(raw, null)
+    const orRule: Rule = { op: "or", args: [{ op: "eq", field: "current", value: label }, { op: "contains", field: "text", values: ["Korsa Launch"] }] }
+    const andRule: Rule = { op: "and", args: [{ op: "eq", field: "current", value: label }, { op: "has_number" }] }
+    expect(buildView(next, withSpec({ filters: [keep(orRule)] })).directives[0].state).toBe("active")
+    expect(buildView(next, withSpec({ filters: [keep(andRule)] })).directives[0].state).toBe("inactive")
+  })
+
+  it("IN13: never claims 'X first' while a filter hides X", async () => {
+    const hideTessaly = withSpec({ filters: [hide({ op: "eq", field: "company", value: "Tessaly Space" })] })
+    const r = await handleChat(
+      { request: "Tessaly Space first", spec: hideTessaly },
+      { brief: orbital, callModel: async () => ({ ok: true, output: { ops: [{ op: "pin", where: { op: "eq", field: "company", value: "Tessaly Space" }, to: "top", label: null, duration: "standing" }] } }) },
+    )
+    expect(r.reply).toMatch(/those items are hidden by another setting/)
+  })
+})

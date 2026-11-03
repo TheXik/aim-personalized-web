@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { GroupBy, Label, Layout, OrderBy, Parts, Rule, SectionKey } from "./spec"
+import { GroupBy, Label, OrderBy, Parts, Rule, SectionKey } from "./spec"
 
 // What the model returns: a few edit operations on the reader's current spec.
 // Code applies them (./apply.ts), validates the result and writes the reply
@@ -22,13 +22,15 @@ const PartsOp = z.object({
 })
 const GroupOp = z.object({ op: z.literal("group"), by: GroupBy })
 const OrderOp = z.object({ op: z.literal("order"), by: OrderBy })
-const LayoutOp = z.object({ op: z.literal("layout"), items: Layout.shape.items.nullable(), figures: Layout.shape.figures.nullable() })
+// Layout is not offered to the model: the one-screen page has no visible effect
+// for it, and every op the chat can apply must visibly change the page. The spec
+// keeps the field so older saved specs still parse. "Make it compact" maps to parts.
 const SectionsOp = z.object({ op: z.literal("sections"), currents: z.boolean().nullable(), updates: z.boolean().nullable() })
 const RenameOp = z.object({ op: z.literal("rename"), section: SectionKey, text: z.string().max(40) })
 const ResetOp = z.object({ op: z.literal("reset") })
 
 // Every op the page can apply. Also the type of not_supported.nearest.
-export const ApplicableOp = z.union([FilterOp, PinOp, RemoveOp, PartsOp, GroupOp, OrderOp, LayoutOp, SectionsOp, RenameOp, ResetOp])
+export const ApplicableOp = z.union([FilterOp, PinOp, RemoveOp, PartsOp, GroupOp, OrderOp, SectionsOp, RenameOp, ResetOp])
 export type ApplicableOp = z.infer<typeof ApplicableOp>
 
 // new_text: needs words the brief does not have (summaries, translation, advice).
@@ -40,7 +42,7 @@ export type NotSupportedReason = z.infer<typeof NotSupportedReason>
 
 const NotSupportedOp = z.object({ op: z.literal("not_supported"), reason: NotSupportedReason, nearest: ApplicableOp.nullable() })
 
-export const Op = z.union([FilterOp, PinOp, RemoveOp, PartsOp, GroupOp, OrderOp, LayoutOp, SectionsOp, RenameOp, ResetOp, NotSupportedOp])
+export const Op = z.union([FilterOp, PinOp, RemoveOp, PartsOp, GroupOp, OrderOp, SectionsOp, RenameOp, ResetOp, NotSupportedOp])
 export type Op = z.infer<typeof Op>
 
 export const MAX_OPS = 6

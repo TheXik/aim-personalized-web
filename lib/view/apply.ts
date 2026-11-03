@@ -1,6 +1,6 @@
 import type { Brief } from "../brief/types"
 import { containsPhrase, fold } from "../brief/text"
-import { allowedValues, ruleSize, validateRule, type RuleProblem } from "./rules"
+import { allowedValues, matches, ruleSize, validateRule, type RuleProblem } from "./rules"
 import type { ApplicableOp, NotSupportedReason, Op } from "./ops"
 import { DEFAULT_SPEC, RULE_LIMITS, SPEC_LIMITS, ViewSpec, type Filter, type Label, type Pin, type Rule } from "./spec"
 
@@ -22,6 +22,7 @@ export type RejectReason =
   | { kind: "limit"; what: "filters" | "pins" | "renames" | "size" }
   | { kind: "unknown_id"; id: string }
   | { kind: "label_not_allowed"; text: string }
+  | { kind: "matches_nothing" }
   | { kind: "not_reader_words"; text: string }
 
 export type Rejection = { op: ApplicableOp; reasons: RejectReason[] }
@@ -81,6 +82,10 @@ function applyOne(spec: ViewSpec, op: ApplicableOp, ctx: ApplyContext, changes: 
       if (problems.length) return { spec, reasons: problems }
       if (spec.filters.some((f) => f.mode === op.mode && sameRule(f.where, op.where))) return { spec, reasons: [] }
       if (spec.filters.length >= SPEC_LIMITS.filters) return { spec, reasons: [{ kind: "limit", what: "filters" }] }
+      // "Only X, this week" where nothing this week is X would just empty the page.
+      if (op.mode === "keep" && op.duration === "this_week" && !ctx.brief.items.some((i) => matches(op.where, i))) {
+        return { spec, reasons: [{ kind: "matches_nothing" }] }
+      }
       const filter: Filter = { id: nextId("f", ids), mode: op.mode, where: op.where, expires: expires(op.duration) }
       changes.push({ kind: "filter_added", filter })
       return { spec: { ...spec, filters: [...spec.filters, filter] }, reasons: [] }
@@ -125,7 +130,6 @@ function applyOne(spec: ViewSpec, op: ApplicableOp, ctx: ApplyContext, changes: 
       return { spec: { ...spec, [key]: op.by }, reasons: [] }
     }
 
-    case "layout":
     case "sections": {
       const key = op.op
       let next: Record<string, unknown> = { ...spec[key] }

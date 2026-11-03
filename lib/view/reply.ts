@@ -84,6 +84,8 @@ function rejectionLine(r: RejectReason): string {
       return r.what === "size" ? "That would make your settings too large." : `You have the most ${r.what} I keep. Remove one first.`
     case "unknown_id":
       return "I couldn't find that setting."
+    case "matches_nothing":
+      return "Nothing in this week's brief matches that, so I left the page as it was."
     case "label_not_allowed":
     case "not_reader_words":
       return "I can only name sections with words from the brief or your own message."
@@ -104,7 +106,11 @@ function changeLine(c: Change, after: ReturnType<typeof buildView>): string {
     }
     case "pin_added": {
       const d = after.directives.find((x) => x.id === c.pin.id)!
-      return d.matched === 0 ? `${pinSummary(c.pin)}: nothing matches this week.` : `${pinSummary(c.pin)}: ${headlines(d.matchedHeadlines)}.`
+      if (d.matched === 0) return `${pinSummary(c.pin)}: nothing matches this week.`
+      // Count only what the reader can see: a filter may hide the pinned items.
+      const shown = after.sections.filter((s) => s.key.endsWith(`:${c.pin.id}`)).flatMap((s) => s.items.map((i) => i.headline))
+      if (shown.length === 0) return `${pinSummary(c.pin)}: those items are hidden by another setting.`
+      return `${pinSummary(c.pin)}: ${headlines(shown)}.`
     }
     case "removed":
       return `Removed “${"mode" in c.what ? filterSummary(c.what) : pinSummary(c.what)}”.`

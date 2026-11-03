@@ -181,3 +181,28 @@ describe("validation", () => {
     expect(parseStoredSpec("garbage")).toEqual(DEFAULT_SPEC)
   })
 })
+
+describe("wording and next-week safety", () => {
+  it("reads has_number as a modifier", () => {
+    const v = buildView(space, withSpec({ filters: [hide({ op: "and", args: [{ op: "eq", field: "tier", value: "one_liner" }, { op: "not", arg: { op: "has_number" } }] })] }))
+    expect(v.directives[0].summary).toBe("Hiding one-liners without numbers")
+  })
+
+  it("band titles join names with and", () => {
+    const v = buildView(space, withSpec({ pins: [pin({ op: "in", field: "company", values: ["Isar Aerospace", "ClearSpace"] })] }))
+    expect(v.sections[0].title).toBe("Isar Aerospace and ClearSpace")
+    expect(v.directives[0].summary).toBe("Isar Aerospace or ClearSpace first")
+  })
+
+  it("company rules still work on a brief without a tags file", () => {
+    const untagged = normalizeBrief(raw("enterprise-ai"), null)
+    const v = buildView(untagged, withSpec({ filters: [keep({ op: "eq", field: "company", value: "Nscale" })] }))
+    expect(v.shownTotal).toBe(1)
+  })
+
+  it("says when a saved setting matched nothing", () => {
+    const v = buildView(space, withSpec({ pins: [pin({ op: "eq", field: "company", value: "Nscale" })] }))
+    expect(v.settingsNote).toBe("1 setting matched nothing this week.")
+    expect(buildView(space, DEFAULT_SPEC).settingsNote).toBeNull()
+  })
+})

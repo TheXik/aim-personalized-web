@@ -26,13 +26,14 @@ const searchText = (item: Item, field: "headline" | "text") =>
 
 export function matches(rule: Rule, item: Item): boolean {
   switch (rule.op) {
-    case "eq": {
-      const v = fold(rule.value)
-      return fieldValues(item, rule.field).some((x) => fold(x) === v)
-    }
+    case "eq":
     case "in": {
-      const vs = rule.values.map(fold)
-      return fieldValues(item, rule.field).some((x) => vs.includes(fold(x)))
+      const vs = rule.op === "eq" ? [rule.value] : rule.values
+      const folded = vs.map(fold)
+      if (fieldValues(item, rule.field).some((x) => folded.includes(fold(x)))) return true
+      // Company: also match the name word for word in the item, so company
+      // rules keep working on a brief that has no tags file yet.
+      return rule.field === "company" && vs.some((v) => containsPhrase(searchText(item, "text"), v))
     }
     case "contains": {
       const hay = searchText(item, rule.field)
@@ -156,9 +157,13 @@ const TIER_NAMES: Record<string, string> = { detail: "in-detail stories", brief:
 const STATUS_NAMES: Record<string, string> = { new: "new this week", updated: "updated stories", carried: "carried-over stories", other: "other stories" }
 
 const quote = (s: string) => `“${s}”`
-const list = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} or ${xs[xs.length - 1]}`)
+const joinList = (xs: string[], word: "or" | "and") =>
+  xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} ${word} ${xs[xs.length - 1]}`
 
-export function describeRule(rule: Rule): string {
+// style "rule" reads like a filter ("SpaceX or Blue Origin"). style "title"
+// reads like a section heading ("SpaceX and Blue Origin").
+export function describeRule(rule: Rule, style: "rule" | "title" = "rule"): string {
+  const list = (xs: string[]) => joinList(xs, style === "title" ? "and" : "or")
   switch (rule.op) {
     case "eq":
     case "in": {
@@ -183,12 +188,22 @@ export function describeRule(rule: Rule): string {
       return `items mentioning ${list(rule.values)}`
     case "has_number":
       return "items with numbers"
-    case "and":
-      return rule.args.map(describeRule).join(" and ")
+    case "and": {
+      // Read has_number and negations as modifiers: "one-liners without numbers".
+      const nouns: string[] = []
+      const mods: string[] = []
+      for (const a of rule.args) {
+        if (a.op === "has_number") mods.push("with numbers")
+        else if (a.op === "not" && a.arg.op === "has_number") mods.push("without numbers")
+        else if (a.op === "not") mods.push(`except ${describeRule(a.arg, style)}`)
+        else nouns.push(describeRule(a, style))
+      }
+      return [nouns.length ? nouns.join(" and ") : "items", ...mods].join(" ")
+    }
     case "or":
-      return rule.args.map(describeRule).join(" or ")
+      return rule.args.map((a) => describeRule(a, style)).join(" or ")
     case "not":
-      return `everything except ${describeRule(rule.arg)}`
+      return rule.arg.op === "has_number" ? "items without numbers" : `everything except ${describeRule(rule.arg, style)}`
   }
 }
 

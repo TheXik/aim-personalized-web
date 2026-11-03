@@ -27,7 +27,7 @@ export function containsPhrase(haystack: string, phrase: string): boolean {
 // Strict "has a number" test from research 06: currency amounts, percentages,
 // multiples and quantities with units. Never ids like "Pad 40", "LC-39A", "Crew-13".
 const NUMBER_RE =
-  /[$€£]\s?\d|\d(?:[\d.,]*\d)?\s?(?:%|×|x\b|X\b|bn\b|B\b|M\b|K\b|T\b|million|billion|trillion|GW|MW|days|acres|cases|tools|seconds)/
+  /[$€£]\s?\d|\d(?:[\d.,]*\d)?\s?(?:%|×|\+|x\b|X\b|bn\b|B\b|M\b|K\b|T\b|million|billion|trillion|GW|MW|days|acres|cases|tools|seconds|customers|users|employees)/
 
 export function hasNumberText(s: string): boolean {
   return NUMBER_RE.test(s)

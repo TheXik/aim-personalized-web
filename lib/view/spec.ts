@@ -51,7 +51,7 @@ export const RULE_LIMITS = { maxDepth: 4, maxNodes: 24 } as const
 // reader labels must be words the reader typed in the chat message (checked in code).
 export const Label = z.object({
   source: z.enum(["scope", "current", "company", "reader"]),
-  text: z.string().max(40),
+  text: z.string().max(80), // brief names run to 49 chars. Reader labels are capped at 40 in code
 })
 export type Label = z.infer<typeof Label>
 

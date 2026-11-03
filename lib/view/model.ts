@@ -46,6 +46,8 @@ export type PageView = {
   parts: Parts
   layout: Layout
   directives: DirectiveView[]
+  // "1 setting matched nothing this week." when a saved rule found nothing, else null.
+  settingsNote: string | null
   hiddenTotal: number
   shownTotal: number
   // When filters leave no items, the page shows a notice and the full brief

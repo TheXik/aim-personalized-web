@@ -164,7 +164,7 @@ export function buildView(brief: Brief, spec: ViewSpec): PageView {
     const section: SectionView = {
       key: `${sectionKey}:${p.id}`,
       kind: sectionKey,
-      title: rename ?? p.label?.text ?? capitalize(describeRule(p.where)),
+      title: rename ?? p.label?.text ?? capitalize(describeRule(p.where, "title")),
       titleSource: rename ? "reader" : (p.label?.source ?? "default"),
       items: sortItems(items, spec.order),
       hiddenCount: 0,
@@ -199,6 +199,9 @@ export function buildView(brief: Brief, spec: ViewSpec): PageView {
     source: renameFor(spec, key) ? ("reader" as const) : ("default" as const),
   })
 
+  const quiet = directives.filter((d) => d.state === "active" && d.matched === 0).length
+  const settingsNote = quiet === 0 ? null : quiet === 1 ? "1 setting matched nothing this week." : `${quiet} settings matched nothing this week.`
+
   return {
     recapId: brief.recapId,
     title: brief.title,
@@ -214,6 +217,7 @@ export function buildView(brief: Brief, spec: ViewSpec): PageView {
     parts: spec.parts,
     layout: spec.layout,
     directives,
+    settingsNote,
     hiddenTotal: hidden.length,
     shownTotal: visible.length,
     emptyFallback,

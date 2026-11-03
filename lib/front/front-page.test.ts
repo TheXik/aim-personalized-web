@@ -81,9 +81,29 @@ describe.skipIf(!HAS_REAL_BRIEFS)(`buildFrontPage, ${REAL_BRIEFS_SKIP}`, () => {
     expect(f.takeaways.length).toBe(0)
   })
 
-  it("drops the takeaways when the reader hides 'what it means', and the hook when figures are hidden", () => {
+  it("drops the takeaways when the reader hides 'what it means', and the hook when figures are hidden or on tap", () => {
     expect(fp(space, { parts: { ...DEFAULT_SPEC.parts, means: false } }).takeaways).toEqual([])
     expect(fp(space, { parts: { ...DEFAULT_SPEC.parts, figures: "hide" } }).hook).toBeNull()
+    expect(fp(space, { parts: { ...DEFAULT_SPEC.parts, figures: "collapsed" } }).hook).toBeNull()
+  })
+
+  it("shows only threads that still have a story in the reader's view", () => {
+    const f = fp(czsk, { filters: [{ id: "f1", mode: "keep", where: { op: "eq", field: "status", value: "new" }, expires: null }] })
+    const visible = new Set(f.order.map((i) => i.key))
+    expect(f.threads.every((t) => t.itemKeys.some((k) => visible.has(k)))).toBe(true)
+  })
+
+  it("never leads with a story the reader pinned to the bottom", () => {
+    const f = fp(space, { pins: [{ id: "p1", where: { op: "eq", field: "tier", value: "detail" }, to: "bottom", label: null, expires: null }] })
+    expect(f.topStory?.tier).not.toBe("detail")
+    expect(f.takeaways.every((t) => t.item.tier !== "detail")).toBe(true)
+  })
+
+  it("only tags groups that add information: company and area, not threads, pins or 'none'", () => {
+    expect(fp(ea, { group: "current" }).grouped).toBe(false)
+    expect(fp(ea, { group: "none" }).grouped).toBe(false)
+    expect(fp(space, { pins: [{ id: "p1", where: { op: "has_number" }, to: "top", label: null, expires: null }] }).grouped).toBe(false)
+    expect(fp(ea, { group: "scope" }).grouped).toBe(true)
   })
 
   it("falls back to the first story with a figure when the top story has none", () => {

@@ -32,7 +32,9 @@ export const MAX_TAKEAWAYS = 2
 
 export function buildFrontPage(view: PageView): FrontPage {
   const sections: SectionView[] = view.emptyFallback ? view.emptyFallback.sections : view.sections
-  const grouped = sections.some((s) => s.kind !== "tier")
+  // Grouped by company or area: those names are worth showing as tags. Grouping by thread is
+  // already visible as the thread cards, and pins are not a grouping.
+  const grouped = sections.some((s) => s.kind === "group" && (s.titleSource === "company" || s.titleSource === "scope"))
 
   const order: Item[] = []
   const seen = new Set<string>()
@@ -42,13 +44,15 @@ export function buildFrontPage(view: PageView): FrontPage {
       if (seen.has(item.key)) continue
       seen.add(item.key)
       order.push(item)
-      if (s.kind === "group") groupOf[item.key] = s.title
+      if (grouped && s.kind === "group") groupOf[item.key] = s.title
     }
   }
   const oneLinerSection = sections.find((s) => s.key === "tier:one_liner")
   const alsoTitle = oneLinerSection && oneLinerSection.titleSource === "reader" ? oneLinerSection.title : null
 
-  const stories = order.filter((i) => i.tier !== "one_liner")
+  // Stories the reader pinned to the bottom never lead the page.
+  const bottom = new Set(sections.filter((s) => s.kind === "pinned_bottom").flatMap((s) => s.items.map((i) => i.key)))
+  const stories = order.filter((i) => i.tier !== "one_liner" && !bottom.has(i.key))
   const oneLiners = order.filter((i) => i.tier === "one_liner")
   const topStory = stories[0] ?? order[0] ?? null
 
@@ -60,7 +64,8 @@ export function buildFrontPage(view: PageView): FrontPage {
     : []
 
   let hook: Hook | null = null
-  if (view.parts.figures !== "hide") {
+  // The one figure is the visual hook, so it shows only when the reader shows figures.
+  if (view.parts.figures === "show") {
     if (topStory?.figure) hook = { item: topStory, figure: topStory.figure, fromTopStory: true }
     else {
       const withFigure = stories.find((i) => i.figure)
@@ -68,7 +73,9 @@ export function buildFrontPage(view: PageView): FrontPage {
     }
   }
 
-  const threads = view.currents ?? []
+  // A thread card only shows while the reader's view still has a story in it.
+  const visible = new Set(order.map((i) => i.key))
+  const threads = (view.currents ?? []).filter((c) => c.itemKeys.some((k) => visible.has(k)))
   const threadLabels = new Set(threads.map((c) => c.label))
   const taken = new Set(takeaways.map((t) => t.item.key))
   const also = order.filter((i) => !taken.has(i.key) && !(i.current && threadLabels.has(i.current)))

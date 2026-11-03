@@ -9,7 +9,9 @@ import type { PageView } from "@/lib/view/model"
 import { DEFAULT_SPEC, parseStoredSpec, specStorageKey, type ViewSpec } from "@/lib/view/spec"
 import { applyOps } from "@/lib/view/apply"
 import { composeReply, type Offer } from "@/lib/view/reply"
-import { toAgentMarkdown } from "@/lib/export/agent-markdown"
+import { askAiMarkdown, toAgentMarkdown } from "@/lib/export/agent-markdown"
+import { contactMailto, type ContactOffer } from "@/lib/chat/contact"
+import { writeClipboard } from "./copy-for-agent"
 import { buildFrontPage } from "@/lib/front/front-page"
 import { ChatDock, ChatPanel, type ChatStep, type ChatTurn, type Suggestion } from "@/components/chat/chat-panel"
 import { FrontPage } from "@/components/front/front-page"
@@ -46,6 +48,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const [sheet, setSheet] = useState<"half" | "full">("half")
   const [chatOpen, setChatOpen] = usePersistedFlag(CHAT_OPEN_KEY, false)
   const offerRequest = useRef("")
+  const declines = useRef(0)
   // Focus moves into the chat only when the reader opens it, not when a remembered panel reappears on load.
   const [focusChat, setFocusChat] = useState(false)
   // One-screen layout from 1024px wide (laptops, tablets in landscape). Below it the page stacks.
@@ -147,10 +150,17 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ reader, request: text, spec }),
+          body: JSON.stringify({ reader, request: text, spec, declinesInARow: declines.current }),
           signal: ctrl.signal,
         })
-        const data = (await res.json().catch(() => ({}))) as { spec?: unknown; reply?: unknown; changed?: unknown; offer?: Offer | null }
+        const data = (await res.json().catch(() => ({}))) as {
+          spec?: unknown
+          reply?: unknown
+          changed?: unknown
+          offer?: Offer | null
+          askAi?: { question?: unknown } | null
+          contact?: ContactOffer | null
+        }
         if (!res.ok && typeof data.reply !== "string") throw new Error(String(res.status))
         if (res.ok && data.changed === true && data.spec) {
           saveSpec(parseStoredSpec(data.spec))
@@ -162,7 +172,12 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           state: res.ok ? "done" : "error",
           ...splitReply(typeof data.reply === "string" ? data.reply : ""),
           offer: res.ok && data.offer && Array.isArray(data.offer.ops) ? { label: String(data.offer.label), ops: data.offer.ops } : null,
+          request: text,
+          askAi: res.ok && data.askAi && typeof data.askAi.question === "string" ? { question: data.askAi.question } : null,
+          contact: res.ok && data.contact && (data.contact.when === "now" || data.contact.when === "after") ? data.contact : null,
         }
+        // Consecutive turns the chat could not do. The server uses it to spot frustration.
+        declines.current = reply.state === "done" && reply.askAi ? declines.current + 1 : 0
         offerRequest.current = text
       } catch (e) {
         const timedOut = e instanceof DOMException && e.name === "AbortError"
@@ -175,6 +190,9 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
             : "I could not reach the model, so your page is unchanged. Your saved view still works.",
           steps: [],
           offer: null,
+          request: text,
+          askAi: null,
+          contact: null,
         }
       } finally {
         clearTimeout(timer)
@@ -197,9 +215,25 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
     setTurns((t) => [
       ...t.map((x) => (x.id === turnId && x.role === "assistant" && x.state !== "pending" ? { ...x, offer: null } : x)),
       { id: `${Date.now()}u`, role: "user", text: offer.label },
-      { id: `${Date.now()}a`, role: "assistant", state: "done", ...splitReply(r.text), offer: r.offer },
+      {
+        id: `${Date.now()}a`,
+        role: "assistant",
+        state: "done",
+        ...splitReply(r.text),
+        offer: r.offer,
+        request: offerRequest.current,
+        askAi: null,
+        contact: null,
+      },
     ])
   }
+
+  // "Ask your own AI": the whole brief in the default design with the question on top,
+  // because the answer may sit in an item the reader's settings hide.
+  const askAi = async (question: string) => (brief ? writeClipboard(askAiMarkdown(brief, question)) : false)
+  // "Tell Lukáš": a prefilled mail the reader sees in full before sending. No server call.
+  const contactHref = (request?: string) =>
+    contactMailto({ request, page: window.location.href, settings: settings.map((c) => c.label), time: new Date().toISOString() })
 
   const suggestions: Suggestion[] = EXAMPLES.map((label) => ({ label, run: () => send(label) }))
   const reset = () => saveSpec(DEFAULT_SPEC)
@@ -256,7 +290,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         showChatButton={desk}
       />
       <main className="app__main" data-front-ready>
-        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} stacked={!desk} inert={Boolean(reading)} />
+        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} inert={Boolean(reading)} />
         {reading ? (
           <div className="rp-layer">
             <div className="rp-scrim" onClick={closeReading} aria-hidden="true" />
@@ -285,6 +319,8 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           viewControls={viewControls}
           onSend={send}
           onOffer={takeOffer}
+          onAskAi={askAi}
+          contactHref={contactHref}
           onClose={closeChat}
           autoFocus={focusChat && desk}
         />

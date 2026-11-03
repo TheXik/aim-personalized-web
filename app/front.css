@@ -125,7 +125,7 @@
   font-family: var(--b-mono); font-size: 11.5px; line-height: 1.5; color: var(--b-muted);
 }
 .tk__why span { color: var(--b-meta); text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px; }
-.tk__why::after { content: ""; position: absolute; inset: 0; }
+.tk__why::after { content: ""; position: absolute; inset: 0; z-index: 2; cursor: pointer; }
 .tk__item:hover .tk__why span, .tk__why:hover span { color: var(--b-ink); text-decoration-color: var(--b-faint); }
 
 /* ---------- Threads ---------- */
@@ -177,7 +177,7 @@
 /* ---------- Figure of the week ---------- */
 
 .fp__figure { position: relative; }
-.hook { margin-top: 12px; border-radius: 12px; transition: box-shadow var(--dur-hover) var(--ease-standard); }
+.hook { margin-top: 12px; border-radius: 12px; cursor: pointer; transition: box-shadow var(--dur-hover) var(--ease-standard); }
 .fp__figure:hover .hook { box-shadow: var(--shadow-card-hover); }
 .hook .fig { margin: 0; }
 .fig--hook { padding: 16px 20px 18px; }
@@ -187,7 +187,7 @@
   font-family: var(--b-mono); font-size: 11px; color: var(--b-faint);
 }
 /* The link covers the whole section, so the figure is one click target. */
-.hook__open::after { content: ""; position: absolute; inset: 0; border-radius: 12px; }
+.hook__open::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: 12px; cursor: pointer; }
 .hook__open:focus-visible { outline: none; }
 .hook__open:focus-visible::after { outline: 2px solid var(--ring); outline-offset: 4px; }
 .fp__figure:hover .hook__open { color: var(--b-ink); }
@@ -202,12 +202,15 @@
 
 /* ---------- Change what you see: card (laptop) and sheet (phone) ---------- */
 
-.chat--card {
-  position: fixed; z-index: 50; right: 20px; top: 68px; bottom: 20px; width: min(380px, calc(100vw - 40px)); height: auto;
-  border: 1px solid var(--b-line-strong); border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden;
-  animation: popIn 260ms var(--ease-out);
-}
+/* Laptop: a docked full-height column on the right. The top bar then belongs to the left
+   column, so the logo, the date and the page content share one left edge, and the panel's
+   header lines up with the top bar's hairline. */
+.chat--card { grid-area: chat; height: 100dvh; min-height: 0; border-left: 1px solid var(--b-line); animation: chat-in 220ms var(--ease-out); }
+@keyframes chat-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
 .chat__head { align-items: center; }
+.chat--card .chat__head { height: 56px; padding: 0 16px 0 20px; flex: none; }
+.chat__title { flex: 1; min-width: 0; }
+.chat__scroll > .chat__sub { margin: 0 0 16px; font-size: 13px; line-height: 1.45; color: var(--b-muted); }
 .chat__mark { width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; color: #fff; background: var(--accent-gradient); flex: none; }
 .chat__try {
   display: block; width: 100%; padding: 11px 14px; text-align: left; cursor: pointer; font: inherit; font-size: 14px; color: var(--b-title);
@@ -280,13 +283,15 @@
 /* Section labels on the front page: darker than the faint token so they pass AA as signposts. */
 .fp .eyebrow, .fp__hint, .hook__open, .card__age, .also__scope { color: #77726f; }
 
-/* The open chat makes room on a laptop instead of covering the right column.
+/* The open chat is a second column on a laptop, so it never covers the page.
    The front page may then scroll inside its own column while the reader changes the view. */
 @media (min-width: 1024px) {
-  .app[data-chat="open"] .app__main { margin-right: 400px; }
-  .app[data-chat="open"] .fp { --fp-pad-x: 40px; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "main"; }
+  .tb { grid-area: top; }
+  .app__main { grid-area: main; }
+  .app[data-chat="open"] { grid-template-columns: minmax(0, 1fr) 400px; grid-template-areas: "top chat" "main chat"; }
+  .app[data-chat="open"] { --fp-pad-x: 40px; }
   .app[data-chat="open"] .fp__row { gap: 32px; }
-  .app[data-chat="open"] .tb { padding-left: 40px; }
 }
 
 /* Screens shorter than 800px: one more step down before anything scrolls. */
@@ -319,6 +324,73 @@
 .hook__src { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fp__figure .fp__head { min-width: 0; }
 /* Group names in a grouped view read as tags, a touch stronger than area names. */
-.also__group { color: var(--b-meta); }
+.also__group { color: var(--b-meta); max-width: 30%; }
 /* The "nothing matched" notice sits where the kicker was. */
 .fp__notice { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--aim-amber-ink); }
+
+/* ---------- When the page cannot do it: offer, then your own AI, then Lukáš ---------- */
+
+.next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+.next--ask, .next--contact { flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 12px; border-top: 1px solid var(--b-line); }
+.next__primary {
+  height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--n-900); background: var(--n-900); color: #fff; cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 500; transition: background var(--dur-hover) var(--ease-standard);
+}
+.next__primary:hover { background: var(--accent-gradient); border-color: transparent; }
+.next__primary:disabled { opacity: 0.5; cursor: default; }
+.next__no { font-size: 12.5px; }
+.next__text { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--b-meta); }
+.next__hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--b-muted); }
+.next--contact { font-size: 13px; line-height: 1.5; color: var(--b-meta); margin: 12px 0 0; }
+.chat__tell { color: var(--b-ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px; }
+.chat__tell:hover { text-decoration-color: var(--b-ink); }
+.chat__foot { margin: -6px 0 0; padding: 0 20px 12px; min-height: 0; font-size: 12px; text-align: right; }
+.chat__foot .chat__tell { font-weight: 400; color: var(--b-muted); }
+
+/* ---------- Also this week: one-liners open in place ---------- */
+
+.also__row { align-items: center; }
+.also__chev { flex: none; color: var(--b-faint); transition: transform 200ms var(--ease-out); }
+.also li.is-open .also__chev { transform: rotate(180deg); color: var(--b-ink); }
+.also li.is-open .also__text { white-space: normal; }
+.also__detail {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 0 0 12px;
+  animation: fadeInUp 200ms var(--ease-out);
+}
+.also__meta {
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+  font-family: var(--b-mono); font-size: 10.5px; line-height: 16px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--b-muted);
+}
+.also__area { font-family: var(--b-sans); text-transform: none; letter-spacing: 0; font-size: 12.5px; color: var(--b-muted); }
+.also__thread { padding: 0; font-size: 12.5px; }
+.also__detail .src { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .also__detail { animation: none; } .also__chev { transition: none; } }
+
+/* On a laptop the list scrolls inside itself when rows open, so the page never grows. */
+@media (min-width: 1024px) {
+  .fp__row--base { flex: 1 1 0; min-height: 0; align-items: stretch; }
+  .fp__also { display: flex; flex-direction: column; min-height: 0; }
+  .fp__also .also { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  .fp__figure { align-self: start; }
+}
+
+/* ---------- Scrollbars: thin, warm, and only there while you use them ---------- */
+
+.rp__scroll, .chat__scroll, .fp__also .also, .fp {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 300ms var(--ease-standard);
+}
+.rp__scroll:hover, .chat__scroll:hover, .fp__also .also:hover, .fp:hover,
+.rp__scroll:focus-within, .chat__scroll:focus-within {
+  scrollbar-color: #d6d2cf transparent;
+}
+/* Engines without scrollbar-color (older Safari): the same thin, rounded thumb. */
+@supports not (scrollbar-color: auto) {
+  .rp__scroll::-webkit-scrollbar, .chat__scroll::-webkit-scrollbar, .also::-webkit-scrollbar, .fp::-webkit-scrollbar { width: 10px; }
+  .rp__scroll::-webkit-scrollbar-thumb, .chat__scroll::-webkit-scrollbar-thumb, .also::-webkit-scrollbar-thumb, .fp::-webkit-scrollbar-thumb {
+    background: #d6d2cf; border-radius: 999px; border: 3px solid var(--background);
+  }
+  .rp__scroll::-webkit-scrollbar-track, .chat__scroll::-webkit-scrollbar-track, .also::-webkit-scrollbar-track, .fp::-webkit-scrollbar-track { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { .rp__scroll, .chat__scroll, .fp__also .also, .fp { transition: none; } .rp__bar::after { transition: none; } }

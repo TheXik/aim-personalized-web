@@ -10,14 +10,26 @@
 }
 .rp {
   position: relative; pointer-events: auto; height: 100%; width: min(640px, 100%); display: flex; flex-direction: column;
-  background: var(--background); border-left: 1px solid var(--b-line); box-shadow: -24px 0 48px -32px #0a0a0a40;
+  background: var(--background); border-left: 1px solid var(--b-line); box-shadow: -1px 0 0 var(--b-line), -32px 0 64px -48px #0a0a0a33;
   animation: rp-in 320ms var(--ease-out);
 }
 @keyframes rp-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes rp-fade { from { opacity: 0; } to { opacity: 1; } }
 
 
-.rp__bar { flex: none; height: 52px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 28px; border-bottom: 1px solid var(--b-line); }
+.rp__bar {
+  position: relative; z-index: 1; flex: none; height: 52px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 28px;
+  border-bottom: 1px solid var(--b-line); background: var(--background);
+  transition: box-shadow 200ms var(--ease-standard);
+}
+/* Reading progress: fills under the header as the reader scrolls a long story. */
+.rp__bar::after {
+  content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; width: calc(var(--rp-progress, 0) * 100%);
+  background: var(--accent-gradient); border-radius: 0 2px 2px 0; opacity: 0; transition: opacity 200ms var(--ease-standard);
+}
+.rp[data-scrollable] .rp__bar::after { opacity: 1; }
+/* A soft shadow only once the content has moved under the header. */
+.rp[data-scrolled] .rp__bar { box-shadow: 0 10px 20px -18px rgba(20, 19, 15, 0.35); }
 .rp__pos { font-family: var(--b-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--b-faint); }
 .rp__spacer { flex: 1; }
 .rp__nav, .rp__close {

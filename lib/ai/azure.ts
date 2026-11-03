@@ -123,10 +123,11 @@ export async function callStructured<T>({
 
   // Hard spend cap (lib/ai/budget.ts). A call that could cross it is never sent.
   const worstCase = worstCaseUsd(new TextEncoder().encode(system + prompt).length, maxOutputTokens);
-  const reservation = await reserve(worstCase);
+  // A ledger error (D1 down) counts as "no budget": the turn falls back to the shortcuts.
+  const reservation = await reserve(worstCase).catch(() => null);
   if (!reservation) {
     const ms = Math.round(performance.now() - t0);
-    logCall({ label, ok: false, reason: "budget", ms, ...(await spent()) });
+    logCall({ label, ok: false, reason: "budget", ms, ...(await spent().catch(() => ({}))) });
     return { ok: false, reason: "budget", usage: null, ms };
   }
 
@@ -145,15 +146,15 @@ export async function callStructured<T>({
     });
     const ms = Math.round(performance.now() - t0);
     const usage = toUsage(r.usage) ?? { input: 0, cachedInput: 0, output: 0, reasoning: 0 };
-    await settle(reservation, costUsd(usage));
-    logCall({ label, ok: true, ms, effort, finishReason: r.finishReason, ...usage, spentUsd: (await spent()).usd });
+    await settle(reservation, costUsd(usage)).catch(() => {});
+    logCall({ label, ok: true, ms, effort, finishReason: r.finishReason, ...usage, spentUsd: (await spent().catch(() => null))?.usd });
     return { ok: true, output: r.output as T, usage, ms };
   } catch (error) {
     const ms = Math.round(performance.now() - t0);
     const reason = classify(error, signal.aborted);
     const usage = toUsage((error as { usage?: UsageLike }).usage);
-    await settle(reservation, usage ? costUsd(usage) : null);
-    logCall({ label, ok: false, reason, ms, effort, ...(usage ?? {}), spentUsd: (await spent()).usd });
+    await settle(reservation, usage ? costUsd(usage) : null).catch(() => {});
+    logCall({ label, ok: false, reason, ms, effort, ...(usage ?? {}), spentUsd: (await spent().catch(() => null))?.usd });
     return { ok: false, reason, usage, ms };
   }
 }

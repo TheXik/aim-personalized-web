@@ -1,3 +1,4 @@
+import "server-only"
 import { rawBrief, rawTags } from "./data"
 import { normalizeBrief } from "./normalize"
 import { TagsFile, isReaderSlug } from "./schema"

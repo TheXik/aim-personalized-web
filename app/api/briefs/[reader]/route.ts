@@ -1,4 +1,5 @@
-import { MISSING_BRIEF_MESSAGE, rawBrief } from "@/lib/brief/data"
+import { rawBrief } from "@/lib/brief/data"
+import { MISSING_BRIEF_MESSAGE } from "@/lib/brief/messages"
 import { isReaderSlug } from "@/lib/brief/schema"
 
 // Stands in for Aim's API: returns the brief unchanged, with some latency

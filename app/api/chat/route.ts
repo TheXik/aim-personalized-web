@@ -1,5 +1,5 @@
 import { callStructured } from "@/lib/ai/azure"
-import { MISSING_BRIEF_MESSAGE } from "@/lib/brief/data"
+import { MISSING_BRIEF_MESSAGE } from "@/lib/brief/messages"
 import { loadBrief } from "@/lib/brief/load"
 import { isReaderSlug } from "@/lib/brief/schema"
 import { handleChat, type ModelResult } from "@/lib/chat/handle"

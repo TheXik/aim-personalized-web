@@ -477,3 +477,12 @@
 .src__list a { display: inline-flex; align-items: baseline; gap: 10px; padding: 3px 0; font-size: 13px; color: var(--b-meta); text-decoration: none; }
 .src__list a:hover { color: var(--b-ink); }
 .src__n { min-width: 16px; font-family: var(--b-mono); font-size: 11px; color: var(--b-faint); text-align: right; }
+
+/* The newest reply never sits behind the input: room under the last message, and the input's
+   focus ring kept clear of the list. A peek tall enough for a two-line reply. */
+.chat__scroll { padding-bottom: 28px; }
+.chat__form { margin-top: 6px; }
+@media (max-width: 1023px) {
+  .chat--sheet[data-sheet="peek"] { height: 42dvh; }
+  .app[data-sheet="peek"] .fp { padding-bottom: calc(42dvh + 24px); }
+}

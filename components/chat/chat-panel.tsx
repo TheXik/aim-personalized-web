@@ -75,19 +75,25 @@ export function ChatPanel({
   // Opening the panel lands on the latest message and the input at once. New replies scroll in smoothly.
   // Idempotent (React runs effects twice in development): the panel lands once per open, then
   // scrolls to the newest message only when a message is added or the sheet changes size.
-  const seen = useRef<{ count: number; sheet: string | undefined } | null>(null)
+  // The pending reply turns into the real one without changing the count, so the last turn's state counts too.
+  const lastTurn = turns[turns.length - 1]
+  const signature = `${turns.length}:${lastTurn && lastTurn.role === "assistant" ? lastTurn.state : "user"}`
+  const seen = useRef<{ signature: string; sheet: string | undefined } | null>(null)
   useEffect(() => {
     const el = scroller.current
     if (!el) return
     if (seen.current === null) {
-      seen.current = { count: turns.length, sheet }
+      seen.current = { signature, sheet }
       el.scrollTop = jump?.to === "view" ? 0 : el.scrollHeight
       return
     }
-    if (seen.current.count === turns.length && seen.current.sheet === sheet) return
-    seen.current = { count: turns.length, sheet }
+    if (seen.current.signature === signature && seen.current.sheet === sheet) return
+    seen.current = { signature, sheet }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" })
+    // Once the reply has animated in and the sheet has settled, make sure its last line is in view.
+    const settle = window.setTimeout(() => el.scrollTo({ top: el.scrollHeight }), 320)
+    return () => window.clearTimeout(settle)
     // Jumps have their own effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, sheet])

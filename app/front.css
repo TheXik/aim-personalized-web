@@ -326,7 +326,7 @@
 /* Group names in a grouped view read as tags, a touch stronger than area names. */
 .also__group { color: var(--b-meta); max-width: 30%; }
 /* The "nothing matched" notice sits where the kicker was. */
-.fp__notice { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--aim-amber-ink); }
+.fp__notice { margin: 0; font-size: 13px; line-height: 1.45; color: var(--aim-amber-ink); }
 
 /* ---------- When the page cannot do it: offer, then your own AI, then Lukáš ---------- */
 
@@ -417,3 +417,32 @@
 .card__meta { flex-wrap: nowrap; white-space: nowrap; font-size: 10.5px; min-width: 0; }
 .card__status { flex: none; }
 .card__age { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Aim's email wording, and headlines never cut mid-word ---------- */
+
+/* "Also this week" headlines wrap to a second line instead of being cut. */
+.also__text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* "Open the story ›" replaces the cut headline in the figure's header. */
+.hook__open { max-width: none; white-space: nowrap; }
+/* "Open the signal ›", as in Aim's email. */
+.src__signal { font-size: 13.5px; font-weight: 500; color: var(--b-muted); text-decoration: none; }
+.src__signal:hover { color: var(--b-ink); }
+/* The brief's subject is the page title, the verdict stays the headline under it. */
+.fp__title { margin: 0 0 8px; font-size: 16px; line-height: 1.35; font-weight: 600; color: var(--b-meta); letter-spacing: -0.005em; text-wrap: pretty; }
+
+/* One spelling of the status label everywhere: "New", "Updated", never upper-cased by a mono label row. */
+.rp__meta .status, .also__meta .status { text-transform: none; letter-spacing: 0; }
+
+/* With the chat open on narrower laptops the top bar stays on one line: compact controls. */
+@media (min-width: 1024px) and (max-width: 1359px) {
+  .app[data-chat="open"] .tb__market, .app[data-chat="open"] .tb__viewmeta, .app[data-chat="open"] .tb__label { display: none; }
+  .app[data-chat="open"] .top__btnlong { display: none; }
+  .app[data-chat="open"] .top__btnshort { display: inline; }
+  .app[data-chat="open"] .tb__chat { padding: 0 12px; }
+}
+/* Narrow thread cards (chat open): the age goes before the status gets cut. */
+.card { container-type: inline-size; }
+@container (max-width: 240px) { .card__age { display: none; } }
+/* Phone sheet: tall enough that all four examples show above the input. */
+@media (max-width: 1023px) { .chat--sheet { height: 70dvh; } .app[data-sheet] .fp { padding-bottom: calc(70dvh + 24px); } }
+@media (max-width: 599px) { .tb__market { display: none; } }

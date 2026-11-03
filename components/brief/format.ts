@@ -21,13 +21,12 @@ export function formatDay(iso: string | null | undefined): string {
   return `${MONTHS[day.m - 1]} ${day.d}`
 }
 
-/** "Sep 21 to 28, 2026" or "Sep 28 to Oct 4, 2026". */
+/** Aim's email format: "Sep 21 to Sep 28, 2026", "Dec 28, 2026 to Jan 4, 2027". */
 export function formatRange(start: string, end: string): string {
   const a = parseDay(start)
   const b = parseDay(end)
   if (!a || !b) return [start, end].filter(Boolean).join(" to ")
   if (a.y !== b.y) return `${MONTHS[a.m - 1]} ${a.d}, ${a.y} to ${MONTHS[b.m - 1]} ${b.d}, ${b.y}`
-  if (a.m === b.m) return `${MONTHS[a.m - 1]} ${a.d} to ${b.d}, ${b.y}`
   return `${MONTHS[a.m - 1]} ${a.d} to ${MONTHS[b.m - 1]} ${b.d}, ${b.y}`
 }
 

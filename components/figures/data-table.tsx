@@ -61,7 +61,7 @@ export function DataTable({ block }: { block: TableBlock }) {
                   return (
                     <td key={j} className="is-mark">
                       <span className={k === "check" ? "tbl__yes" : "tbl__no"} aria-hidden="true" />
-                      <span className="sr-only">{k === "check" ? "Yes" : "No"}</span>
+                      <span className="sr-only">{k === "check" ? "Yes" : k === "cross" ? "No" : "Not listed"}</span>
                     </td>
                   )
                 }

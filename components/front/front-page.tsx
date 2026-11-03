@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import type { HTMLAttributes, ReactNode } from "react"
 import type { Current, Item } from "@/lib/brief/types"
 import type { PageView } from "@/lib/view/model"
 import type { FrontPage as FrontModel, Hook } from "@/lib/front/front-page"
@@ -15,7 +16,8 @@ import { formatDay } from "@/components/brief/format"
 
 type Open = (r: Reading) => void
 
-export const ALSO_ROWS = 4
+// Three rows, so headlines can wrap to a second line instead of being cut, and the page still fits.
+export const ALSO_ROWS = 3
 
 export function FrontPage({
   view,
@@ -37,7 +39,12 @@ export function FrontPage({
         <Lead view={view} fp={fp} onOpen={onOpen} />
         <Takeaways fp={fp} onOpen={onOpen} />
       </div>
-      <Threads threads={fp.threads} order={fp.order} title={view.titles.currents.title} onOpen={onOpen} />
+      <Threads
+        threads={fp.threads}
+        order={fp.order}
+        title={view.titles.currents.source === "reader" ? view.titles.currents.title : "This week's currents"}
+        onOpen={onOpen}
+      />
       <div className="fp__row fp__row--base">
         <AlsoThisWeek
           items={also}
@@ -54,6 +61,11 @@ export function FrontPage({
 }
 
 /** The verdict as the headline, and one way in. */
+/** The verdict is an h1 only when it is also the title (empty subject), else a paragraph under the title. */
+function VerdictTag({ asTitle, children, ...rest }: { asTitle: boolean; children: ReactNode } & HTMLAttributes<HTMLElement> & { "data-more"?: string }) {
+  return asTitle ? <h1 {...rest}>{children}</h1> : <p {...rest}>{children}</p>
+}
+
 function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Open }) {
   const first = fp.order[0]
   const threads = fp.threads.length
@@ -62,19 +74,17 @@ function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Op
   const [more, setMore] = useState(false)
   const [lead, rest] = splitFirstSentence(view.verdict)
   return (
-    <section className="fp__lead" aria-labelledby="fp-verdict">
-      {/* When the reader's filters leave nothing, say so here, on the same line, and show the full brief. */}
-      {view.emptyFallback ? (
-        <p className="fp__notice" role="status">
-          {view.emptyFallback.notice}
-        </p>
-      ) : (
-        <p className="eyebrow fp__kicker">Your market brief</p>
+    <section className="fp__lead" aria-labelledby={view.titleIsVerdict ? "fp-verdict" : "fp-title"}>
+      {/* The brief's subject is the title. When it is empty, the verdict is the title. */}
+      {view.titleIsVerdict ? null : (
+        <h1 className="fp__title" id="fp-title">
+          {view.title}
+        </h1>
       )}
-      <h1 className="fp__verdict" id="fp-verdict" data-more={more ? "open" : undefined}>
+      <VerdictTag asTitle={view.titleIsVerdict} className="fp__verdict" id="fp-verdict" data-more={more ? "open" : undefined}>
         {lead}
         {rest ? <span className="fp__verdict-rest"> {rest}</span> : null}
-      </h1>
+      </VerdictTag>
       {rest && !more ? (
         <button type="button" className="fp__verdict-more" onClick={() => setMore(true)}>
           Read the full summary
@@ -86,10 +96,17 @@ function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Op
             Start reading
           </button>
         ) : null}
-        <span className="fp__count">
-          {threads > 0 ? `${threads} ${threads === 1 ? "thread" : "threads"} · ` : ""}
-          {items} {items === 1 ? "item" : "items"} · {view.readingMinutes} min
-        </span>
+        {/* When the reader's filters leave nothing, the notice takes the count's place (no extra height). */}
+        {view.emptyFallback ? (
+          <p className="fp__notice" role="status">
+            {view.emptyFallback.notice}
+          </p>
+        ) : (
+          <span className="fp__count">
+            {threads > 0 ? `${threads} ${threads === 1 ? "current" : "currents"} · ` : ""}
+            {items} {items === 1 ? "item" : "items"}
+          </span>
+        )}
       </div>
     </section>
   )
@@ -125,9 +142,9 @@ function Threads({ threads, order, title, onOpen }: { threads: Current[]; order:
     <section className="fp__threads" aria-labelledby="fp-threads-t">
       <div className="fp__head">
         <h2 className="eyebrow fp__label" id="fp-threads-t">
-          {title === "This week's threads" || title === "This week’s threads" ? "Threads we track for you" : title}
+          {title}
         </h2>
-        <span className="fp__hint">Open a thread to read it</span>
+        <span className="fp__hint">Open a current to read it</span>
       </div>
       <ul className="cards" style={{ ["--n" as string]: threads.length }}>
         {threads.map((c) => {
@@ -142,7 +159,11 @@ function Threads({ threads, order, title, onOpen }: { threads: Current[]; order:
                   <span className="card__dot" aria-hidden="true" />
                   {threadStatus(c)}
                 </span>
-                {threadAge(c) ? <span className="card__age">{threadAge(c)}</span> : null}
+                {threadAge(c) ? (
+                  <span className="card__age" title={`Running ${threadAge(c)}`}>
+                    {threadAge(c)}
+                  </span>
+                ) : null}
               </span>
               <span className="card__label">{c.label}</span>
               <span className="card__line">{c.line}</span>
@@ -239,7 +260,7 @@ function AlsoThisWeek({
                       Part of “{i.current}”
                     </button>
                   ) : null}
-                  {i.sources.length > 0 ? <Sources links={i.sources} label={i.sources.length === 1 ? "Source" : "Sources"} /> : null}
+                  {i.sources.length > 0 ? <Sources links={i.sources} /> : null}
                 </div>
               ) : null}
             </li>
@@ -284,10 +305,10 @@ function threadStatus(c: Current): string {
   return c.statusRaw.replace(/_/g, " ")
 }
 
-/** "running four weeks": how long the thread has run, so it never reads as a contradiction with "new". */
+/** The thread's age as Aim's email writes it ("two weeks"). Hidden when it only says "this week". */
 function threadAge(c: Current): string | null {
   if (!c.sinceLabel || c.sinceLabel === "this week") return null
-  return `running ${c.sinceLabel}`
+  return c.sinceLabel
 }
 
 /** Splits the verdict after its first sentence. The words stay exactly as the brief wrote them. */
@@ -313,11 +334,14 @@ function FigureOfTheWeek({ hook, onOpen }: { hook: Hook | null; onOpen: Open }) 
     <section className="fp__figure" aria-labelledby="fp-fig-t">
       <div className="fp__head">
         <h2 className="eyebrow fp__label" id="fp-fig-t">
-          {hook.fromTopStory ? "From the top story" : "Figure of the week"}
+          {hook.figure.scope === "current" && hook.item.current
+            ? "The top story's current"
+            : hook.fromTopStory
+              ? "From the top story"
+              : "Figure of the week"}
         </h2>
         <button type="button" className="hook__open" onClick={() => onOpen({ kind: "story", key: hook.item.key })} title={hook.item.headline}>
-          <span className="hook__src">{hook.item.headline}</span>
-          <Arrow />
+          Open the story ›
         </button>
       </div>
       <div className="hook">

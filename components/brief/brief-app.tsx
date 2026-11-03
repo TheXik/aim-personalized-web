@@ -96,6 +96,10 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const view = useMemo(() => (brief ? safeView(brief, spec) : null), [brief, spec])
   const fp = useMemo(() => (view ? buildFrontPage(view) : null), [view])
   const settings = useMemo(() => settingChips(spec), [spec])
+  // The tab title is the brief's own title: its subject, or the verdict when the subject is empty.
+  useEffect(() => {
+    if (view) document.title = `${view.title} · Aim`
+  }, [view])
   const changes = spec.filters.length + spec.pins.length + settings.length
 
   // The reading panel is part of the browser history, so Back closes it (phones especially).
@@ -289,6 +293,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
       <TopBar
         periodStart={view.periodStart}
         periodEnd={view.periodEnd}
+        minutes={fp.readingMinutes}
         changes={changes}
         hidden={view.hiddenTotal}
         chatOpen={chatShown}

@@ -30,7 +30,7 @@ export function Figure({
   variant?: "full" | "hook"
 }) {
   const hook = variant === "hook"
-  const eyebrow = hook ? undefined : figure.scope === "current" && threadLabel ? `${KIND_LABEL[figure.type]} · whole thread` : KIND_LABEL[figure.type]
+  const eyebrow = hook ? undefined : figure.scope === "current" && threadLabel ? `${KIND_LABEL[figure.type]} · whole current` : KIND_LABEL[figure.type]
 
   switch (figure.type) {
     case "timeline":

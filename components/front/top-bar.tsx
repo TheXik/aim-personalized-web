@@ -13,6 +13,7 @@ import { formatRange } from "@/components/brief/format"
 export function TopBar({
   periodStart,
   periodEnd,
+  minutes,
   changes,
   hidden,
   chatOpen,
@@ -23,6 +24,7 @@ export function TopBar({
 }: {
   periodStart: string
   periodEnd: string
+  minutes: number
   changes: number
   hidden: number
   chatOpen: boolean
@@ -37,7 +39,11 @@ export function TopBar({
         <AimMark size={22} />
         Aim
       </Link>
-      <span className="tb__date">{formatRange(periodStart, periodEnd)}</span>
+      {/* The email's masthead: "Your market", the reading time, the week. */}
+      <span className="tb__date">
+        <span className="tb__market">Your market · {minutes} min · </span>
+        {formatRange(periodStart, periodEnd)}
+      </span>
       <span className="tb__spacer" />
       {changes > 0 ? (
         <button type="button" className="tb__view" onClick={onOpenChat} title="Your saved view. Open to change or reset it.">
@@ -51,9 +57,16 @@ export function TopBar({
       ) : null}
       {getMarkdown ? <CopyForAgent getMarkdown={getMarkdown} /> : null}
       {showChatButton ? (
-        <button type="button" className="tb__chat" aria-expanded={chatOpen} aria-controls="change-panel" onClick={onChat}>
+        <button
+          type="button"
+          className="tb__chat"
+          aria-expanded={chatOpen}
+          aria-controls="change-panel"
+          aria-label="Change what you see"
+          onClick={onChat}
+        >
           <AimMark size={16} spin={false} />
-          Change what you see
+          <span className="tb__label">Change what you see</span>
         </button>
       ) : null}
     </header>

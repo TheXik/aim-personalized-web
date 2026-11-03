@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "recap_id": "rcp_DzcstrmDUDmjg2",
+  "source": "brief-cz-sk-ai.json",
+  "method": "gpt-5-mini-hiring at reasoning effort low, run twice on 3 Nov 2026 (research/05-benchmark.md, experiment C). Kept the tags both runs returned that appear word for word in the item headline, paragraphs or means line. index is the position in recap.doc.items before any sorting.",
+  "items": [
+    {
+      "index": 0,
+      "headline": "Mironet replaced Claude agents with Jev, cutting categorization costs 343×.",
+      "companies": [
+        "Mironet",
+        "Jev",
+        "Vercel"
+      ]
+    },
+    {
+      "index": 1,
+      "headline": "Macaly Cloud made Claude/ChatGPT deployments one-click, free until 1 October.",
+      "companies": [
+        "Macaly Cloud",
+        "team.blue"
+      ]
+    },
+    {
+      "index": 2,
+      "headline": "Cequence said billing agents get 105 tools when they need four.",
+      "companies": [
+        "Cequence"
+      ]
+    },
+    {
+      "index": 3,
+      "headline": "Petra Stupková warned Czech leaders to treat AI pace as risk.",
+      "companies": []
+    },
+    {
+      "index": 4,
+      "headline": "Laati said its Gemini agent breached three companies in a security test.",
+      "companies": [
+        "Laati"
+      ]
+    },
+    {
+      "index": 5,
+      "headline": "Adam Juřica argued for “safe acceleration” instead of slowing AI.",
+      "companies": []
+    },
+    {
+      "index": 6,
+      "headline": "CVC agreed to buy a minority stake in Prague’s CDN77 at $1.9B.",
+      "companies": [
+        "CVC",
+        "CDN77"
+      ]
+    },
+    {
+      "index": 7,
+      "headline": "EIF invested €27M in IP Lab Ventures Fund I.",
+      "companies": [
+        "EIF",
+        "IP Lab Ventures Fund I"
+      ]
+    },
+    {
+      "index": 8,
+      "headline": "VisionFlow raised €1.4M as a convertible loan maturing in December 2028.",
+      "companies": [
+        "VisionFlow"
+      ]
+    },
+    {
+      "index": 9,
+      "headline": "Ranketta won Startup of the Year 2026 and claimed 100+ customers.",
+      "companies": [
+        "Ranketta"
+      ]
+    },
+    {
+      "index": 10,
+      "headline": "BottleCap AI released ThinkingCap-Qwen3.8–27B claiming 37% fewer thinking tokens.",
+      "companies": [
+        "BottleCap AI"
+      ]
+    }
+  ]
+}

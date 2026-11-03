@@ -10,7 +10,7 @@
     "test": "vitest run",
     "check:fit": "node scripts/check-fit.mjs",
     "eval": "tsx tests/eval/run.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "cf:preview": "bash scripts/cf-build.sh && opennextjs-cloudflare preview",
     "cf:deploy": "bash scripts/cf-build.sh && opennextjs-cloudflare deploy"

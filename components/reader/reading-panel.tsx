@@ -14,7 +14,8 @@ import { StatusMark } from "@/components/brief/kicker"
 // The brief's own tier names, as in Aim's email.
 const TIER_NAME = { detail: "In detail", brief: "In brief", one_liner: "Also this week" } as const
 
-export type Reading = { kind: "story"; key: string } | { kind: "thread"; label: string } | { kind: "more" }
+// A current opened from a story remembers that story ("from"), so the panel can mark it and go back to it.
+export type Reading = { kind: "story"; key: string } | { kind: "thread"; label: string; from?: string } | { kind: "more" }
 
 export function ReadingPanel({
   reading,
@@ -25,6 +26,8 @@ export function ReadingPanel({
   showUpdates,
   onOpen,
   onClose,
+  backTo,
+  onBack,
   modal,
 }: {
   modal: boolean
@@ -34,8 +37,11 @@ export function ReadingPanel({
   moreItems: Item[]
   parts: Parts
   showUpdates: boolean
-  onOpen: (r: Reading) => void
+  onOpen: (r: Reading, step?: boolean) => void
   onClose: () => void
+  // One step back inside the panel (story, then current, then back). Null when there is nothing to go back to.
+  backTo: Reading | null
+  onBack: () => void
 }) {
   const heading = useRef<HTMLHeadingElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
@@ -87,6 +93,11 @@ export function ReadingPanel({
   return (
     <div className="rp" ref={panel} role="dialog" aria-modal={modal} aria-labelledby="rp-h">
       <div className="rp__bar">
+        {backTo ? (
+          <button type="button" className="rp__back" onClick={onBack}>
+            ‹ {backTo.kind === "thread" ? "Back to the current" : backTo.kind === "story" ? "Back to the story" : "Back"}
+          </button>
+        ) : null}
         <span className="rp__pos">{position}</span>
         <span className="rp__spacer" />
         {reading.kind === "story" ? (
@@ -130,7 +141,16 @@ export function ReadingPanel({
             onOpen={onOpen}
           />
         ) : thread ? (
-          <ThreadBody thread={thread} order={order} parts={parts} heading={heading} onOpen={onOpen} index={threads.indexOf(thread)} />
+          <ThreadBody
+            thread={thread}
+            order={order}
+            parts={parts}
+            heading={heading}
+            onOpen={onOpen}
+            onBack={onBack}
+            from={reading.kind === "thread" ? reading.from : undefined}
+            index={threads.indexOf(thread)}
+          />
         ) : reading.kind === "more" ? (
           <MoreBody items={moreItems} heading={heading} onOpen={onOpen} />
         ) : (
@@ -165,7 +185,7 @@ function StoryBody({
   heading: React.RefObject<HTMLHeadingElement | null>
   threads: Current[]
   order: Item[]
-  onOpen: (r: Reading) => void
+  onOpen: (r: Reading, step?: boolean) => void
 }) {
   const visible = new Set(order.map((i) => i.key))
   const thread = story.current ? threads.find((t) => t.label === story.current) : undefined
@@ -201,10 +221,22 @@ function StoryBody({
         </p>
       ))}
       {story.current && threadIndex >= 0 ? (
-        <button type="button" className="rp__thread" onClick={() => onOpen({ kind: "thread", label: story.current as string })}>
-          <span className="eyebrow">Part of current {String(threadIndex + 1).padStart(2, "0")}</span>
-          <span className="rp__threadlabel">{story.current}</span>
-        </button>
+        onlyStory ? (
+          // A current with only this story: nothing else to open, so plain text, never a loop.
+          <div className="rp__thread rp__thread--static">
+            <span className="eyebrow">Part of current {String(threadIndex + 1).padStart(2, "0")}</span>
+            <span className="rp__threadlabel">{story.current}</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="rp__thread"
+            onClick={() => onOpen({ kind: "thread", label: story.current as string, from: story.key }, true)}
+          >
+            <span className="eyebrow">Part of current {String(threadIndex + 1).padStart(2, "0")}</span>
+            <span className="rp__threadlabel">{story.current}</span>
+          </button>
+        )
       ) : null}
       {onlyStory ? <p className="rp__note">This current has one story this week.</p> : null}
       {story.scope && story.scope !== "Other" && story.scope.length > 24 ? (
@@ -224,13 +256,18 @@ function ThreadBody({
   parts,
   heading,
   onOpen,
+  onBack,
+  from,
   index,
 }: {
   thread: Current
   order: Item[]
   parts: Parts
   heading: React.RefObject<HTMLHeadingElement | null>
-  onOpen: (r: Reading) => void
+  onOpen: (r: Reading, step?: boolean) => void
+  onBack: () => void
+  // The story the reader came from: marked as the one being read, and clicking it goes back.
+  from?: string
   index: number
 }) {
   // A current reads as a timeline: newest first, Aim's order kept on equal dates (the sort is stable).
@@ -259,11 +296,17 @@ function ThreadBody({
         <ul>
           {stories.map((s) => (
             <li key={s.key}>
-              <button type="button" className="rp__row" onClick={() => onOpen({ kind: "story", key: s.key })}>
+              <button
+                type="button"
+                className={s.key === from ? "rp__row is-current" : "rp__row"}
+                aria-current={s.key === from ? "true" : undefined}
+                onClick={() => (s.key === from ? onBack() : onOpen({ kind: "story", key: s.key }, true))}
+              >
                 <span className="rp__rowdate">{formatDay(s.date)}</span>
                 <span className="rp__rowtext">
                   {s.headline}
                   {s.tier === "detail" ? <span className="rp__rowtag">In detail</span> : null}
+                  {s.key === from ? <span className="rp__rowtag rp__rowtag--reading">Reading</span> : null}
                 </span>
               </button>
             </li>
@@ -283,7 +326,7 @@ function MoreBody({
 }: {
   items: Item[]
   heading: React.RefObject<HTMLHeadingElement | null>
-  onOpen: (r: Reading) => void
+  onOpen: (r: Reading, step?: boolean) => void
 }) {
   return (
     <article className="rp__story" aria-labelledby="rp-h">
@@ -294,7 +337,7 @@ function MoreBody({
         <ul>
           {items.map((s) => (
             <li key={s.key}>
-              <button type="button" className="rp__row" onClick={() => onOpen({ kind: "story", key: s.key })}>
+              <button type="button" className="rp__row" onClick={() => onOpen({ kind: "story", key: s.key }, true)}>
                 <span className="rp__rowdate">{formatDay(s.date)}</span>
                 <span className="rp__rowtext">
                   {s.status === "new" ? <span className="rp__new" aria-label="New">●</span> : null}

@@ -109,16 +109,27 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   // Where focus goes back to when the panel closes: the card or row that opened it.
   const returnTo = useRef<HTMLElement | null>(null)
   const restoreFocus = () => requestAnimationFrame(() => returnTo.current?.focus())
+  // One step back inside the panel: story, then current, then back. A step pushes, Back pops,
+  // a fresh open from the front page starts a new trail. So the reader can never loop.
+  const [trail, setTrail] = useState<Reading[]>([])
   const openReading = useCallback(
-    (r: Reading) => {
+    (r: Reading, step = false) => {
       if (!reading && document.activeElement instanceof HTMLElement) returnTo.current = document.activeElement
       const hash = `#${r.kind === "story" ? `story-${r.key.split(":").pop()}` : r.kind === "thread" ? "thread" : "more"}`
       if (reading) window.history.replaceState({ aimReading: true }, "", hash)
       else window.history.pushState({ aimReading: true }, "", hash)
+      setTrail((t) => (!reading ? [] : step ? [...t, reading] : t))
       setReading(r)
     },
     [reading],
   )
+  const backReading = useCallback(() => {
+    setTrail((t) => {
+      const prev = t[t.length - 1]
+      if (prev) setReading(prev)
+      return t.slice(0, -1)
+    })
+  }, [])
   const closeReading = useCallback(() => {
     if (window.history.state?.aimReading) window.history.back()
     else {
@@ -318,6 +329,8 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
               showUpdates={view.updates !== null}
               onOpen={openReading}
               onClose={closeReading}
+              backTo={trail[trail.length - 1] ?? null}
+              onBack={backReading}
               modal={desk}
             />
           </div>

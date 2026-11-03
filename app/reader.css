@@ -97,3 +97,16 @@
   .rp__headline { font-size: 22px; }
 }
 @keyframes rp-up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* One step back inside the panel. */
+.rp__back {
+  height: 32px; padding: 0 10px 0 6px; margin-right: 6px; border: 0; border-radius: 999px; background: none; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 500; color: var(--b-meta);
+}
+.rp__back:hover { background: var(--b-paper); color: var(--b-ink); }
+/* A current with one story is plain text, not a link. */
+.rp__thread--static { cursor: default; }
+.rp__thread--static:hover { border-color: var(--b-line-strong); background: var(--b-paper-soft); }
+/* The story you came from, marked in the current's list. */
+.rp__row.is-current .rp__rowtext { color: var(--b-ink); font-weight: 500; }
+.rp__rowtag--reading { background: var(--b-ink); color: #fff; }

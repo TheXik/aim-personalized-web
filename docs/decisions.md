@@ -185,7 +185,7 @@ How to read it:
 
 ## 11. The chat only changes the view
 
-**Decision.** The chat only changes what the page shows. It does not answer questions about the brief, and its label says so: "Change what you see". Code catches questions before any model call. The reader gets the closest view as one click, then "Ask your own AI", which copies the whole brief with the question on top, then "Tell Lukáš", a prefilled email they see in full before sending.
+**Decision.** The chat only changes what the page shows. It does not answer questions about the brief, and its label says so: "Change what you see". Code catches questions before any model call. The reply says "I change what you see, I can't answer questions", then offers the closest change as one click, then "Tell Lukáš", a prefilled email they see in full before sending. An earlier "Ask your own AI" button was dropped: it did not change the view, so it broke the chat's one promise. "Copy for your agent" in the top bar remains for readers who want the brief in their own assistant.
 
 **Why.** The brief asks for a chat that customises the page. A question label invites requests the chat has to refuse, and an answer written by the model would be model text on the page (decision 5).
 

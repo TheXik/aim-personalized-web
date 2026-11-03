@@ -63,7 +63,7 @@ To turn on the live chat, put your key after `AZURE_OPENAI_API_KEY=` in `.env.lo
 - All three reader pages, the front page and the reading panel, every figure type, the phone, tablet and laptop layouts.
 - Saved settings that survive a reload, the setting chips, Reset, and "Copy for your agent".
 - The chat for the brief's four example requests, which are also the suggestion chips: "Only what's new this week", "Numbers first", "Hide the one-liners", "Group it by company". Built-in shortcuts also cover "group by thread", "group by topic", "headlines only", "newest first", "hide the threads", "hide the figures", "hide the sources" and "reset". A request only uses a shortcut when every part of it matches one.
-- Questions about the brief, "Ask your own AI" and "Tell Lukáš" (see [How the chat works](#how-the-chat-works)). None of them call the model.
+- Questions about the brief and "Tell Lukáš" (see [How the chat works](#how-the-chat-works)), plus the common section toggles: hide or show the threads, figures and sources, and hide "Also this week", typos and Czech or Slovak included ("remvo charts", "skryj grafy"). None of them call the model.
 
 **Needs the key and `CHAT_LIVE=1`:** any other request, for example "Put Isar, RFA and Sirius at the top" or "hide the data-center thread". Without the model the chat says so and leaves the page as it was.
 
@@ -85,7 +85,7 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 4. Code writes the chat reply from the change: what changed, which items matched, how many are hidden. No model text reaches the page.
 5. The settings are saved per reader in the browser (`localStorage`, key `aim.view.v1.<reader>`). They apply to every later brief with no model call. Settings about a field last forever, settings about a thread last while that thread exists, and settings about one item expire with the week. Reset returns to the default design.
 6. If the model is off, times out after 15 seconds, is blocked by Azure's content filter or is over budget, the chat uses a built-in shortcut when the whole request matches one. Otherwise it leaves the page unchanged and says why.
-7. The chat only changes the view. It does not answer questions, on purpose (decision 11). Code catches questions such as "who led Nscale's round?" before any model call, so they cost nothing. The reader gets the closest view as one click (the companies or areas they named), then "Ask your own AI", which copies the whole brief as Markdown with their question on top, for the assistant they already use.
+7. The chat only changes the view. It does not answer questions, on purpose (decision 11). Code catches questions such as "who led Nscale's round?" before any model call, so they cost nothing. The reply says "I change what you see, I can't answer questions" and offers the closest change as one click (the companies or areas they named), then "Tell Lukáš". A change that would match nothing this week is refused rather than reported as "0 hidden".
 8. When the chat cannot help, or the reader sounds frustrated (their words, capitals, "!!!", or two declines in a row), it offers "Tell Lukáš": a prefilled email with the request, the page, the active settings and the time. The reader sees all of it in their own mail app before anything is sent. The link also sits under the chat input. Every declined request is logged without IP or cookie, so the roadmap comes from what readers asked for.
 
 **The chat prompt is in [`prompts/view-editor.md`](prompts/view-editor.md).** The one-time company tagging prompt is in [`prompts/company-tags.md`](prompts/company-tags.md). The operations are defined in `lib/view/ops.ts`, the settings in `lib/view/spec.ts`, and the pure function from (brief, settings) to page in `lib/view/engine.ts`.
@@ -111,7 +111,7 @@ The page loads its brief through `GET /api/briefs/<reader>`, which returns the f
 | `lib/front/` | Which stories, threads and figure make the front page |
 | `lib/view/` | Settings, rules, engine, edit operations, reply writer |
 | `lib/chat/` | Chat handling, offline shortcuts, question and frustration checks, the "Tell Lukáš" link |
-| `lib/export/` | Markdown for "Copy for your agent" and "Ask your own AI" |
+| `lib/export/` | Markdown for "Copy for your agent" |
 | `lib/ai/` | The Azure call and the spend ledger |
 | `lib/infra/` | Password gate and the decline log |
 | `prompts/` | The model prompt |

@@ -82,7 +82,7 @@ export async function POST(req: Request) {
         // so it is safe to honour from anyone. The post-deploy smoke test uses it.
         if (offlineMode() || req.headers.get("x-chat-offline") === "1") return { ok: false, reason: "offline" }
         if (!takeModelCall()) return { ok: false, reason: "rate_limited" }
-        const r = await callStructured({ label: "chat", system: VIEW_EDITOR_PROMPT, prompt: userPrompt, schema: Edit })
+        const r = await callStructured({ label: "chat", system: VIEW_EDITOR_PROMPT, prompt: userPrompt, schema: Edit, timeoutMs: 20_000 })
         return r.ok ? { ok: true, output: r.output } : { ok: false, reason: r.reason }
       },
       log: (entry) => console.info(JSON.stringify({ reader: body.reader, ...entry })),

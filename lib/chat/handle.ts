@@ -9,6 +9,8 @@ import { CONTACT_EMAIL } from "../config"
 import type { ContactOffer } from "./contact"
 import { frustrationSignal } from "./frustration"
 import { isQuestion, nearestForQuestion } from "./question"
+import { buildFrontPage } from "../front/front-page"
+import { buildView } from "../view/engine"
 
 // One chat turn, with the model injected so it can be tested without Azure.
 
@@ -33,17 +35,15 @@ export type ChatResponse = {
   changed: boolean
   offer: Offer | null
   source: "model" | "offline" | "none"
-  // Set when the chat cannot do the request (a question, or a change this page
-  // cannot make). The UI offers "Ask your own AI" with the brief as Markdown and
-  // this question on top: right away when there is no offer, otherwise after
-  // the reader says the offered view is not it.
-  askAi: { question: string } | null
+  // The chat could not do it (a question, "not supported", or nothing applied).
+  // The browser counts these in a row: two in a row show the direct line at once.
+  declined: boolean
   // The direct line to Lukáš (lib/chat/contact.ts), or null. Never set when
   // CONTACT_EMAIL is empty.
   contact: ContactOffer | null
 }
 
-type Turn = Omit<ChatResponse, "contact"> & { decline: string | null }
+type Turn = Omit<ChatResponse, "contact" | "declined"> & { decline: string | null }
 
 const FAILURE_COPY: Record<Exclude<ModelResult, { ok: true }>["reason"], string> = {
   timeout: "That took too long, so I left your page as it was. Try again, or pick a suggestion.",
@@ -76,43 +76,48 @@ export async function handleChat(input: ChatInput, deps: ChatDeps): Promise<Chat
         ? { when: "after", reason: "declined" }
         : null
   if (decline !== null) await deps.logDecline?.({ reason: decline, request, frustrated })
-  return { ...res, contact }
+  return { ...res, declined: decline !== null, contact }
 }
 
 async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
   const spec = sanitizeSpec(parseStoredSpec(input.spec), deps.brief)
   const request = typeof input.request === "string" ? input.request.trim().slice(0, MAX_REQUEST_CHARS) : ""
   const log = deps.log ?? (() => {})
-  if (!request) return { spec, reply: "Tell me how you'd like the page, for example “numbers first”.", changed: false, offer: null, source: "none", askAi: null, decline: null }
+  if (!request) return { spec, reply: "Tell me how you'd like the page, for example “numbers first”.", changed: false, offer: null, source: "none", decline: null }
 
-  // Questions never reach the model. Closest view first, then "Ask your own AI".
+  // Questions never reach the model. The chat only changes what you see, so a
+  // question gets the closest change, then the direct line (contact "after").
   if (isQuestion(request)) {
     const offer = namesOffer(request, spec, deps.brief)
     log({ event: "question", request })
     return {
       spec,
       reply: offer
-        ? "This page doesn't answer questions. It only changes what you see, so every word stays from your brief. The closest view is one click away."
-        : "This page doesn't answer questions. It only changes what you see, so every word stays from your brief. You can ask your own AI with this week's brief.",
+        ? "I change what you see, I can't answer questions. The closest change is one click away."
+        : "I change what you see, I can't answer questions. Try “only new items” or “group it by company”.",
       changed: false,
       offer,
       source: "none",
-      askAi: { question: request },
       decline: "question",
     }
   }
 
-  const prompt = JSON.stringify({ catalog: buildCatalog(deps.brief), current_spec: specForModel(spec), request })
-  const result = await deps.callModel(prompt)
-
   let ops: Op[]
   let source: ChatResponse["source"] = "model"
-  let prefix = ""
-  if (result.ok) {
-    ops = result.output.ops
+
+  // A request that is exactly a built-in shortcut (the example chips, "hide the
+  // one-liners") needs no model: free, instant and the same every time.
+  const shortcut = matchOffline(request)
+  if (shortcut) {
+    ops = shortcut
+    source = "offline"
   } else {
-    const offline = result.reason === "content_filter" ? null : matchOffline(request)
-    if (!offline) {
+    const prompt = JSON.stringify({ catalog: buildCatalog(deps.brief), current_spec: specForModel(spec), request })
+    const result = await deps.callModel(prompt)
+    if (result.ok) {
+      ops = result.output.ops
+    } else {
+      // No shortcut matched (checked above), so every failure ends here.
       log({ event: "chat_failed", reason: result.reason })
       // No dead end: the closest view from names the reader typed, and the
       // Ask-your-own-AI route. Not after the content filter (a hostile request).
@@ -123,17 +128,23 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
         changed: false,
         offer: hostile ? null : namesOffer(request, spec, deps.brief),
         source: "none",
-        askAi: hostile ? null : { question: request },
         decline: null,
       }
     }
-    ops = offline
-    source = "offline"
-    prefix = result.reason === "offline" ? "" : "The assistant is unavailable, so I used a built-in shortcut. "
   }
 
   const applied = applyOps(spec, ops, { brief: deps.brief, request })
   const reply = composeReply(deps.brief, spec, applied, request)
+
+  // Every change must show on the page. Group tags appear on the "Also this
+  // week" rows, so grouping while those rows are hidden changes nothing visible.
+  const grouped = applied.changes.some((c) => c.kind === "setting" && c.path === "group" && (c.to === "company" || c.to === "scope"))
+  if (grouped) {
+    const front = buildFrontPage(buildView(deps.brief, applied.spec))
+    if (!front.also.some((i) => front.groupOf[i.key])) {
+      reply.text += " The groups show in “Also this week”, which your current settings hide."
+    }
+  }
 
   if (applied.notSupported || applied.rejected.length) {
     // Unmet requests grow the grammar. The request is the reader's own text.
@@ -153,11 +164,10 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
   const offer = reply.offer ?? (couldNot ? namesOffer(request, applied.spec, deps.brief) : null)
   return {
     spec: applied.spec,
-    reply: prefix + reply.text,
+    reply: reply.text,
     changed: reply.changed,
     offer,
     source,
-    askAi: couldNot || reply.substituted ? { question: request } : null,
     decline,
   }
 }

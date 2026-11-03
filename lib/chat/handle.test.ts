@@ -36,7 +36,7 @@ const turn = (brief = space, request: string, ops: Op[] | ModelResult, spec: Vie
 describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
   describe("the model never sees brief prose", () => {
     it("sends names and counts, not headlines or paragraphs", async () => {
-      const r = await turn(space, "numbers first", [])
+      const r = await turn(space, "put the European players on top", [])
       expect(r.prompt).toContain("SpaceX")
       for (const item of space.items) expect(r.prompt).not.toContain(item.headline)
       expect(r.prompt).not.toContain(space.verdict)
@@ -50,8 +50,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
       ])
       expect(r.changed).toBe(true)
       expect(r.spec.filters).toHaveLength(1)
-      expect(r.reply).toMatch(/^Only new items\. Showing 5:/)
-      expect(r.reply).toMatch(/This hides 6 of 11 items\./)
+      expect(r.reply).toMatch(/^Only new items: 5 of 11 shown\./)
       expect(r.offer?.label).toBe("Show new and updated stories")
     })
 
@@ -64,7 +63,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
       const r = await turn(space, "hide the one-liners", [
         { op: "filter", mode: "hide", where: { op: "eq", field: "tier", value: "one_liner" }, duration: "standing" },
       ])
-      expect(r.reply).toBe("Hiding one-liners, 7 hidden.")
+      expect(r.reply).toBe("Hiding one-liners: 7 hidden.")
     })
 
     it("group it by company", async () => {
@@ -140,11 +139,12 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
       expect(r.reply).toMatch(/took too long/)
     })
 
-    it("falls back to a built-in shortcut for common requests", async () => {
+    it("answers a whole built-in shortcut without calling the model at all", async () => {
       const r = await turn(space, "Hide the one-liners please", { ok: false, reason: "error" })
+      expect(r.prompt).toBeUndefined()
       expect(r.source).toBe("offline")
       expect(r.spec.filters).toHaveLength(1)
-      expect(r.reply).toMatch(/^The assistant is unavailable, so I used a built-in shortcut\. Hiding one-liners/)
+      expect(r.reply).toMatch(/^Hiding one-liners/)
     })
 
     it("never uses a shortcut after Azure's content filter", async () => {

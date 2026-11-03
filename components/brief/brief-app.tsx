@@ -23,7 +23,8 @@ import { useMedia } from "./ui-state"
 
 type Load = { state: "loading" } | { state: "error" } | { state: "missing"; message: string } | { state: "ready"; brief: Brief }
 
-const CHAT_TIMEOUT_MS = 15_000
+// Above the server's 20 s model timeout, so the server answers first.
+const CHAT_TIMEOUT_MS = 25_000
 
 // Plain-language examples, the brief's own four requests. Each also works with the model down.
 const EXAMPLES = ["Only what's new this week", "Numbers first", "Hide the one-liners", "Group it by company"]
@@ -167,7 +168,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           reply?: unknown
           changed?: unknown
           offer?: Offer | null
-          askAi?: { question?: unknown } | null
+          declined?: unknown
           contact?: ContactOffer | null
           source?: unknown
         }
@@ -184,7 +185,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           offer: res.ok && data.offer && Array.isArray(data.offer.ops) ? { label: String(data.offer.label), ops: data.offer.ops } : null,
           request: text,
           // The page could not do it: the turn then offers the closest view, the examples and the direct line.
-          couldNot: !(res.ok && data.changed === true) && (!!(res.ok && data.askAi) || !res.ok || data.source === "none"),
+          couldNot: !(res.ok && data.changed === true) && (!res.ok || data.declined === true || data.source === "none"),
           contact: res.ok && data.contact && (data.contact.when === "now" || data.contact.when === "after") ? data.contact : null,
         }
         // Consecutive turns the chat could not do. The server uses it to spot frustration.

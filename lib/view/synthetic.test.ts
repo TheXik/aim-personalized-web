@@ -375,3 +375,32 @@ describe("persona A4: no refusal is a dead end", () => {
     expect(hostile.askAi).toBeNull()
   })
 })
+
+describe("thread cards follow pins and newest first", () => {
+  const labels = (spec: ViewSpec) => buildView(orbital, spec).currents!.map((c) => c.label)
+  const pinThread = (label: string, to: "top" | "bottom"): ViewSpec =>
+    withSpec({ pins: [{ id: "p1", where: { op: "eq", field: "current", value: label }, to, label: null, expires: null }] })
+
+  it("keeps the brief's order by default", () => {
+    expect(labels(DEFAULT_SPEC)).toEqual(orbital.currents.map((c) => c.label))
+  })
+
+  it("'the insurance thread first' moves that thread card to the front, on the front page too", async () => {
+    const label = orbital.currents[2].label
+    expect(labels(pinThread(label, "top"))[0]).toBe(label)
+    const { buildFrontPage } = await import("@/lib/front/front-page")
+    expect(buildFrontPage(buildView(orbital, pinThread(label, "top"))).threads[0].label).toBe(label)
+  })
+
+  it("a thread pinned to the bottom goes last", () => {
+    const label = orbital.currents[0].label
+    expect(labels(pinThread(label, "bottom")).at(-1)).toBe(label)
+  })
+
+  it("newest first sorts threads by their latest visible story", () => {
+    const out = buildView(orbital, withSpec({ order: "newest" })).currents!
+    const latest = (c: (typeof out)[number]) => orbital.items.filter((i) => c.itemKeys.includes(i.key)).map((i) => i.date ?? "").sort().at(-1) ?? ""
+    const dates = out.map(latest)
+    expect([...dates].sort().reverse()).toEqual(dates)
+  })
+})

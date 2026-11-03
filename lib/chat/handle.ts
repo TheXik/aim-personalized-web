@@ -87,9 +87,7 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
 
   // Questions never reach the model. Closest view first, then "Ask your own AI".
   if (isQuestion(request)) {
-    const nearest = nearestForQuestion(request, deps.brief)
-    const trial = nearest ? applyOps(spec, [nearest], { brief: deps.brief, request }) : null
-    const offer = nearest && trial && trial.rejected.length === 0 && trial.changes.length > 0 ? { label: describeOp(nearest), ops: [nearest] } : null
+    const offer = namesOffer(request, spec, deps.brief)
     log({ event: "question", request })
     return {
       spec,
@@ -116,7 +114,18 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
     const offline = result.reason === "content_filter" ? null : matchOffline(request)
     if (!offline) {
       log({ event: "chat_failed", reason: result.reason })
-      return { spec, reply: FAILURE_COPY[result.reason], changed: false, offer: null, source: "none", askAi: null, decline: null }
+      // No dead end: the closest view from names the reader typed, and the
+      // Ask-your-own-AI route. Not after the content filter (a hostile request).
+      const hostile = result.reason === "content_filter"
+      return {
+        spec,
+        reply: FAILURE_COPY[result.reason],
+        changed: false,
+        offer: hostile ? null : namesOffer(request, spec, deps.brief),
+        source: "none",
+        askAi: hostile ? null : { question: request },
+        decline: null,
+      }
     }
     ops = offline
     source = "offline"
@@ -139,5 +148,25 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
   // The chat could not do it: an explicit "not supported", or nothing applied.
   const couldNot = applied.notSupported !== null || (!reply.changed && applied.rejected.length > 0)
   const decline = couldNot ? (applied.notSupported ? `not_supported:${applied.notSupported.reason}` : "rejected") : null
-  return { spec: applied.spec, reply: prefix + reply.text, changed: reply.changed, offer: reply.offer, source, askAi: couldNot ? { question: request } : null, decline }
+  // No dead end: a refusal without a valid nearest op falls back to the names
+  // the reader typed. A substitution keeps the Ask-your-own-AI route open.
+  const offer = reply.offer ?? (couldNot ? namesOffer(request, applied.spec, deps.brief) : null)
+  return {
+    spec: applied.spec,
+    reply: prefix + reply.text,
+    changed: reply.changed,
+    offer,
+    source,
+    askAi: couldNot || reply.substituted ? { question: request } : null,
+    decline,
+  }
+}
+
+// The closest view from brief names the reader typed (companies, areas), as a
+// one-click offer. Only offered when it passes the same checks as an edit.
+function namesOffer(request: string, spec: ViewSpec, brief: Brief): Offer | null {
+  const nearest = nearestForQuestion(request, brief)
+  if (!nearest) return null
+  const trial = applyOps(spec, [nearest], { brief, request })
+  return trial.rejected.length === 0 && trial.changes.length > 0 ? { label: describeOp(nearest), ops: [nearest] } : null
 }

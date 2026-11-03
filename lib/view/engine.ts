@@ -1,4 +1,4 @@
-import type { Brief, Item, Tier } from "../brief/types"
+import type { Brief, Current, Item, Tier } from "../brief/types"
 import { TIERS } from "../brief/types"
 import type { DirectiveState, DirectiveView, PageView, SectionView } from "./model"
 import { capitalize, describeRule, isThreadInactive, matches } from "./rules"
@@ -115,6 +115,36 @@ function buildSections(visible: Item[], hidden: Item[], spec: ViewSpec, brief: B
     })
 }
 
+// Thread order follows the reader's view, so every change shows on the page:
+// threads holding stories pinned to the top come first (in pin order), threads
+// whose stories are all pinned to the bottom come last, and "newest first" sorts
+// the rest by their latest visible story. Otherwise the brief's own order.
+function orderCurrents(brief: Brief, top: SectionView[], bottom: SectionView[], visible: Item[], order: ViewSpec["order"]): Current[] {
+  const NONE = Number.MAX_SAFE_INTEGER
+  const topRank = new Map<string, number>()
+  top.forEach((s, i) => s.items.forEach((it) => topRank.has(it.key) || topRank.set(it.key, i)))
+  const bottomKeys = new Set(bottom.flatMap((s) => s.items.map((i) => i.key)))
+  const byKey = new Map(visible.map((i) => [i.key, i]))
+  const rank = (c: Current) => {
+    const keys = c.itemKeys.filter((k) => byKey.has(k))
+    return {
+      top: Math.min(NONE, ...keys.map((k) => topRank.get(k) ?? NONE)),
+      bottom: keys.length > 0 && keys.every((k) => bottomKeys.has(k)),
+      latest: keys.map((k) => byKey.get(k)!.date ?? "").sort().at(-1) ?? "",
+    }
+  }
+  return brief.currents
+    .map((c) => ({ c, r: rank(c) }))
+    .sort(
+      (a, b) =>
+        a.r.top - b.r.top ||
+        Number(a.r.bottom) - Number(b.r.bottom) ||
+        (order === "newest" ? b.r.latest.localeCompare(a.r.latest) : 0) ||
+        a.c.index - b.c.index,
+    )
+    .map((x) => x.c)
+}
+
 export function buildView(brief: Brief, spec: ViewSpec): PageView {
   const directives: DirectiveView[] = []
 
@@ -210,7 +240,7 @@ export function buildView(brief: Brief, spec: ViewSpec): PageView {
     periodStart: brief.periodStart,
     periodEnd: brief.periodEnd,
     readingMinutes: brief.readingMinutes,
-    currents: spec.sections.currents ? brief.currents : null,
+    currents: spec.sections.currents ? orderCurrents(brief, top, bottom, visible, spec.order) : null,
     sections,
     updates: spec.sections.updates && brief.citations.length > 0 ? brief.citations : null,
     titles: { currents: title("currents"), updates: title("updates") },

@@ -1,5 +1,6 @@
 import type { Brief } from "../brief/types"
 import type { ApplyResult, Change, RejectReason } from "./apply"
+import { substitutionNote } from "../chat/substitution"
 import { applyOps } from "./apply"
 import { buildView, DEFAULT_TITLES, filterSummary, pinSummary } from "./engine"
 import type { ApplicableOp, NotSupportedReason } from "./ops"
@@ -10,7 +11,10 @@ import type { Rule, SectionKey, ViewSpec } from "./spec"
 // none of it. Headlines quoted here are the brief's own text.
 
 export type Offer = { label: string; ops: ApplicableOp[] }
-export type Reply = { text: string; changed: boolean; offer: Offer | null }
+// substituted: the change applied is a stand-in for what was asked (see
+// lib/chat/substitution.ts), so the reply says so and the UI keeps the
+// "Ask your own AI" route open.
+export type Reply = { text: string; changed: boolean; offer: Offer | null; substituted: boolean }
 
 const SETTING_COPY: Record<string, (to: unknown) => string> = {
   "parts.paragraphs": (to) => (to === "none" ? "Headlines only, no paragraphs." : to === "first" ? "Showing the first paragraph only." : "Showing full paragraphs."),
@@ -34,7 +38,7 @@ const NOT_SUPPORTED_COPY: Record<NotSupportedReason, string> = {
   outside_knowledge: "The brief doesn't say that, and I never add facts. If you name the companies or topics, I can filter or pin them.",
   ambiguous: "I can read that in more than one way, so I left the page as it was.",
   off_topic: "I can only change how this brief is shown.",
-  other: "That's not something this page can do yet.",
+  other: "That's not something this page can do yet. It can show only some stories, put some first or last, group by company, thread or area, sort by newest or by numbers, and hide parts of each story.",
 }
 
 function headlines(hs: string[], max = 3): string {
@@ -159,7 +163,9 @@ export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult
   }
 
   if (lines.length === 0) lines.push("Nothing changed. Your page already looks like that.")
-  return { text: lines.join(" "), changed, offer }
+  const note = substitutionNote(request, result.changes)
+  if (note) lines.unshift(note)
+  return { text: lines.join(" "), changed, offer, substituted: note !== null }
 }
 
 export const ruleText = describeRule

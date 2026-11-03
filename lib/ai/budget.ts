@@ -16,9 +16,14 @@
 const SAFETY = 1.2
 const PRICE = { input: (0.25 / 1e6) * SAFETY, cached: (0.025 / 1e6) * SAFETY, output: (2.0 / 1e6) * SAFETY }
 
-// Default 10 cents per UTC day. MODEL_BUDGET_USD can change it, never above 20 cents.
-const HARD_CEILING_USD = 0.2
-export const capUsd = () => Math.min(Number(process.env.MODEL_BUDGET_USD ?? 0.1) || 0.1, HARD_CEILING_USD)
+// Default 10 cents per UTC day. MODEL_BUDGET_USD can change it within a ceiling:
+// dev, tests and evals never above 20 cents, the production site on Workers
+// never above 10 dollars. The production value itself is set in wrangler.jsonc.
+const DEV_CEILING_USD = 0.2
+const PROD_CEILING_USD = 10
+const onWorkers = () => typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers"
+export const ceilingUsd = () => (onWorkers() ? PROD_CEILING_USD : DEV_CEILING_USD)
+export const capUsd = () => Math.min(Number(process.env.MODEL_BUDGET_USD ?? 0.1) || 0.1, ceilingUsd())
 
 export type Ledger = { usd: number; calls: number; day: string }
 
@@ -57,8 +62,6 @@ function d1Store(db: D1): Store {
     },
   }
 }
-
-const onWorkers = () => typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers"
 
 async function cloudflareStore(): Promise<Store | null> {
   try {

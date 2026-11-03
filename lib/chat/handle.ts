@@ -1,4 +1,5 @@
 import type { Brief } from "../brief/types"
+import { containsPhrase } from "../brief/text"
 import { applyOps, sanitizeSpec } from "../view/apply"
 import { buildCatalog, specForModel } from "../view/catalog"
 import type { Edit, Op } from "../view/ops"
@@ -105,9 +106,22 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
   let ops: Op[]
   let source: ChatResponse["source"] = "model"
 
+  // Undo: there is no step history yet, and guessing undid the wrong change
+  // (live test C1). Say how to go back and change nothing.
+  if (UNDO.test(request)) {
+    return {
+      spec,
+      reply: "I can't undo step by step yet. Remove a setting with its × under “Your view”, or use Reset for the default view.",
+      changed: false,
+      offer: null,
+      source: "none",
+      decline: null,
+    }
+  }
+
   // A request that is exactly a built-in shortcut (the example chips, "hide the
   // one-liners") needs no model: free, instant and the same every time.
-  const shortcut = matchOffline(request)
+  const shortcut = matchOffline(request) ?? fundingFilter(request, deps.brief)
   if (shortcut) {
     ops = shortcut
     source = "offline"
@@ -179,4 +193,19 @@ function namesOffer(request: string, spec: ViewSpec, brief: Brief): Offer | null
   if (!nearest) return null
   const trial = applyOps(spec, [nearest], { brief, request })
   return trial.rejected.length === 0 && trial.changes.length > 0 ? { label: describeOp(nearest), ops: [nearest] } : null
+}
+
+const UNDO = /^\s*(undo|revert|go back|take (that|it) back|zpět|zpet|vrať to|vrat to|späť|spat|vráť to)\b[\s\w]{0,20}$/i
+
+// "Only funding": a text filter on money words that this week's brief really
+// uses (validation rejects phrases the brief does not contain), never a refusal.
+const FUNDING = /^\s*(only|just|show( me)?( only)?)\s+(the\s+)?(funding|fundraising|deals?|rounds?|money|investments?|financing|financov[aá]n[ií]|financovanie|investice|investície)(\s+(news|stories|items|rounds|deals))?(\s+(please|pls|thanks))?\s*$/i
+const MONEY_WORDS = ["raised", "raises", "funding", "invested", "investment", "round", "financing", "stake", "Series A", "Series B", "Series C", "Series D", "Series E"]
+
+function fundingFilter(request: string, brief: Brief): Op[] | null {
+  if (!FUNDING.test(request)) return null
+  const text = brief.items.map((i) => [i.headline, ...i.paragraphs].join(" ")).join(" \n ")
+  const values = MONEY_WORDS.filter((w) => containsPhrase(text, w)).slice(0, 12)
+  if (values.length === 0) return null
+  return [{ op: "filter", mode: "keep", where: { op: "contains", field: "text", values }, duration: "standing" }]
 }

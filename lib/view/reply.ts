@@ -78,7 +78,7 @@ export function describeOp(op: ApplicableOp): string {
 
 // Never quotes a literal the code rejected: it came from the model, and no
 // model-written text may reach the reader (decision 5).
-function rejectionLine(r: RejectReason): string {
+function rejectionLine(r: RejectReason, partial = false): string {
   switch (r.kind) {
     case "unknown_phrase":
       return "One of those words isn't in this week's brief, so I didn't filter on it."
@@ -91,7 +91,9 @@ function rejectionLine(r: RejectReason): string {
     case "unknown_id":
       return "I couldn't find that setting."
     case "matches_nothing":
-      return "Nothing in this week's brief matches that, so I left the page as it was."
+      return partial
+        ? "Part of that matched nothing this week, so I left that part out."
+        : "Nothing in this week's brief matches that, so I left the page as it was."
     case "unclear":
       return "I wasn't sure which stories you meant by “other”, so I left that part out."
     case "label_not_allowed":
@@ -134,7 +136,8 @@ export function composeReply(brief: Brief, before: ViewSpec, result: ApplyResult
   const lines = result.changes.map((c) => changeLine(c, after))
   let offer: Offer | null = null
 
-  for (const r of result.rejected) lines.push(...r.reasons.slice(0, 1).map(rejectionLine))
+  const partial = result.changes.length > 0
+  for (const r of result.rejected) lines.push(...r.reasons.slice(0, 1).map((x) => rejectionLine(x, partial)))
 
   if (result.notSupported) {
     lines.push(NOT_SUPPORTED_COPY[result.notSupported.reason])

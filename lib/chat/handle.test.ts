@@ -157,7 +157,7 @@ describe.skipIf(!HAS_REAL_BRIEFS)(REAL_BRIEFS_SKIP, () => {
   describe("spec edits", () => {
     it("remove and reset", async () => {
       const one = await turn(ea, "numbers first", [{ op: "pin", where: { op: "has_number" }, to: "top", label: null, duration: "standing" }])
-      const removed = await turn(ea, "undo that", [{ op: "remove", id: one.spec.pins[0].id }], one.spec)
+      const removed = await turn(ea, "remove the numbers setting", [{ op: "remove", id: one.spec.pins[0].id }], one.spec)
       expect(removed.spec.pins).toHaveLength(0)
       expect(removed.reply).toBe("Removed “Items with numbers first”.")
       const reset = await turn(ea, "start over", [{ op: "reset" }], one.spec)

@@ -325,7 +325,7 @@ describe("persona A3: substitutions are named", () => {
   })
 
   it("'only funding' as a numbers filter is named too", async () => {
-    const r = await run("only funding news", [{ op: "filter", mode: "keep", where: { op: "has_number" }, duration: "standing" }])
+    const r = await run("only funding news with big amounts", [{ op: "filter", mode: "keep", where: { op: "has_number" }, duration: "standing" }])
     expect(r.reply).toMatch(/^I can't filter by deal or amount yet, so I used items with numbers instead\./)
   })
 
@@ -419,7 +419,9 @@ describe("eval triage fixes", () => {
       { brief: orbital, callModel: async () => ({ ok: true, output: { ops: [{ op: "filter", mode: "keep", where: { op: "has_number" }, duration: "standing" }, { op: "filter", mode: "keep", where: { op: "and", args: [{ op: "eq", field: "tier", value: "detail" }, { op: "eq", field: "figure", value: "none" }] }, duration: "this_week" }] } }) },
     )
     expect(r.spec.filters).toHaveLength(1)
-    expect(r.reply).toMatch(/Nothing in this week's brief matches that/)
+    // One part applied, so the reply must not claim the page stayed the same (live test C2).
+    expect(r.reply).toMatch(/Part of that matched nothing this week, so I left that part out\./)
+    expect(r.reply).not.toMatch(/left the page as it was/)
   })
 
   it("thread lifetime is recursive: OR with a text rule survives a renamed thread, AND does not", () => {
@@ -519,5 +521,37 @@ describe("never apply a change that changes nothing", () => {
     expect(r.changed).toBe(false)
     expect(r.reply).toMatch(/^Nothing in this week's brief matches that/)
     expect(r.reply).not.toMatch(/0 hidden/)
+  })
+})
+
+describe("live test criticals (C1 to C4)", () => {
+  const chat = async (request: string, spec: ViewSpec = DEFAULT_SPEC, ops: Op[] = []) => {
+    let calls = 0
+    const r = await handleChat({ request, spec }, { brief: orbital, callModel: async () => (calls++, { ok: true, output: { ops } }) })
+    return { ...r, calls }
+  }
+
+  it("C1: 'undo that' never undoes the wrong change", async () => {
+    const before = withSpec({ pins: [pin({ op: "has_number" })], parts: { ...DEFAULT_SPEC.parts, paragraphs: "none" } })
+    const r = await chat("undo that", before, [{ op: "remove", id: "p1" }])
+    expect(r.calls).toBe(0)
+    expect(r.changed).toBe(false)
+    expect(r.spec).toEqual(before)
+    expect(r.reply).toMatch(/I can't undo step by step yet/)
+  })
+
+  it("C3: 'hide the old threads' hides updated and carried stories, the same every time", async () => {
+    const r = await chat("hide the old threads")
+    expect(r.calls).toBe(0)
+    expect(r.spec.sections.currents).toBe(true)
+    expect(r.spec.filters[0]).toMatchObject({ mode: "hide", where: { op: "in", field: "status", values: ["updated", "carried"] } })
+  })
+
+  it("C4: 'only funding pls' filters on money words this brief really uses", async () => {
+    const r = await chat("only funding pls")
+    expect(r.calls).toBe(0)
+    expect(r.changed).toBe(true)
+    const where = r.spec.filters[0].where
+    expect(where.op === "contains" && where.values.includes("raised")).toBe(true)
   })
 })

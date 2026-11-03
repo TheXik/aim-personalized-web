@@ -124,9 +124,15 @@ const MEASURE = `(() => {
     overflow: el.scrollHeight - el.clientHeight,
     overflowX: el.scrollWidth - el.clientWidth,
   }))
+  // Spare room: how far the last section ends above the bottom of the front page.
   const front = document.querySelector("[data-front]")
-  const frontBottom = front ? Math.round(front.getBoundingClientRect().bottom) : null
-  return { pageOverflow, regions, frontBottom, innerHeight: window.innerHeight }
+  let spare = null
+  if (front) {
+    const pad = parseFloat(getComputedStyle(front).paddingBottom) || 0
+    const bottom = Math.max(...[...front.children].map((c) => c.getBoundingClientRect().bottom))
+    spare = Math.round(front.getBoundingClientRect().bottom - pad - bottom)
+  }
+  return { pageOverflow, regions, spare, innerHeight: window.innerHeight }
 })()`
 
 async function main() {
@@ -163,7 +169,7 @@ async function main() {
       const ok = m.pageOverflow <= 1 && bad.length === 0
       if (!ok) failed++
       const detail = ok
-        ? `fits (front ends at ${m.frontBottom}px of ${m.innerHeight})`
+        ? `fits, ${m.spare}px to spare`
         : `page overflow ${m.pageOverflow}px${bad.map((r) => `, ${r.name} overflows ${Math.max(r.overflow, r.overflowX)}px`).join("")}`
       console.log(`${ok ? "ok  " : "FAIL"} ${label} ${detail}`)
     }

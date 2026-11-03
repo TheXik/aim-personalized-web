@@ -32,6 +32,7 @@ export function ChatPanel({
   onClose,
   sheet,
   onSheet,
+  autoFocus = false,
 }: {
   // card: floating panel on a laptop. sheet: bottom sheet on a phone or tablet.
   variant: "card" | "sheet"
@@ -45,6 +46,7 @@ export function ChatPanel({
   onClose: () => void
   sheet?: "half" | "full"
   onSheet?: (s: "half" | "full") => void
+  autoFocus?: boolean
 }) {
   const [text, setText] = useState("")
   const scroller = useRef<HTMLDivElement>(null)
@@ -56,8 +58,8 @@ export function ChatPanel({
   }, [turns])
 
   useEffect(() => {
-    input.current?.focus({ preventScroll: true })
-  }, [])
+    if (autoFocus) input.current?.focus({ preventScroll: true })
+  }, [autoFocus])
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {

@@ -46,6 +46,8 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const [sheet, setSheet] = useState<"half" | "full">("half")
   const [chatOpen, setChatOpen] = usePersistedFlag(CHAT_OPEN_KEY, false)
   const offerRequest = useRef("")
+  // Focus moves into the chat only when the reader opens it, not when a remembered panel reappears on load.
+  const [focusChat, setFocusChat] = useState(false)
   // One-screen layout from 1024px wide (laptops, tablets in landscape). Below it the page stacks.
   const desk = useMedia("(min-width: 1024px)", true)
 
@@ -202,7 +204,14 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         changes={changes}
         hidden={view.hiddenTotal}
         chatOpen={chatOpen}
-        onChat={() => setChatOpen(!chatOpen)}
+        onChat={() => {
+          setFocusChat(!chatOpen)
+          setChatOpen(!chatOpen)
+        }}
+        onOpenChat={() => {
+          setFocusChat(true)
+          setChatOpen(true)
+        }}
         getMarkdown={() => toAgentMarkdown({ view, settings: settings.map((c) => c.label) })}
         showChatButton={desk}
       />
@@ -236,9 +245,18 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           onSend={send}
           onOffer={takeOffer}
           onClose={closeChat}
+          autoFocus={focusChat}
         />
       ) : null}
-      {!desk && !chatOpen ? <ChatDock changes={changes} onOpen={() => setChatOpen(true)} /> : null}
+      {!desk && !chatOpen ? (
+        <ChatDock
+          changes={changes}
+          onOpen={() => {
+            setFocusChat(true)
+            setChatOpen(true)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

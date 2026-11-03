@@ -17,6 +17,7 @@ export function TopBar({
   hidden,
   chatOpen,
   onChat,
+  onOpenChat,
   getMarkdown,
   showChatButton,
 }: {
@@ -26,6 +27,7 @@ export function TopBar({
   hidden: number
   chatOpen: boolean
   onChat: () => void
+  onOpenChat: () => void
   getMarkdown: (() => string) | null
   showChatButton: boolean
 }) {
@@ -38,7 +40,7 @@ export function TopBar({
       <span className="tb__date">{formatRange(periodStart, periodEnd)}</span>
       <span className="tb__spacer" />
       {changes > 0 ? (
-        <button type="button" className="tb__view" onClick={onChat} title="Your saved view. Open to change or reset it.">
+        <button type="button" className="tb__view" onClick={onOpenChat} title="Your saved view. Open to change or reset it.">
           <span className="tb__viewdot" aria-hidden="true" />
           Your view
           <span className="tb__viewmeta">

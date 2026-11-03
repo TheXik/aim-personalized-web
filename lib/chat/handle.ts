@@ -16,7 +16,8 @@ export const MAX_REQUEST_CHARS = 500
 
 export type ModelResult =
   | { ok: true; output: Edit }
-  | { ok: false; reason: "timeout" | "content_filter" | "rate_limited" | "invalid_output" | "budget" | "error" }
+  // offline: live calls are switched off on this server (no CHAT_LIVE), not an outage.
+  | { ok: false; reason: "timeout" | "content_filter" | "rate_limited" | "invalid_output" | "budget" | "offline" | "error" }
 
 export type ChatDeps = {
   brief: Brief
@@ -50,6 +51,7 @@ const FAILURE_COPY: Record<Exclude<ModelResult, { ok: true }>["reason"], string>
   rate_limited: "The assistant is busy right now. Your page is unchanged, try again in a moment.",
   invalid_output: "I couldn't turn that into a change. Your page is unchanged. Try saying it another way.",
   budget: "The model budget for this demo is used up. Your page is unchanged, the suggestions still work.",
+  offline: "Live chat is off on this server, so I only understand short commands such as “hide the one-liners”, “numbers first”, “group it by company” or “hide the threads”. Your page is unchanged.",
   error: "The assistant is unavailable right now. Your page is unchanged.",
 }
 
@@ -118,7 +120,7 @@ async function turn(input: ChatInput, deps: ChatDeps): Promise<Turn> {
     }
     ops = offline
     source = "offline"
-    prefix = "The assistant is unavailable, so I used a built-in shortcut. "
+    prefix = result.reason === "offline" ? "" : "The assistant is unavailable, so I used a built-in shortcut. "
   }
 
   const applied = applyOps(spec, ops, { brief: deps.brief, request })

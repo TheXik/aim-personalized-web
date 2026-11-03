@@ -18,6 +18,23 @@ const SHORTCUTS: { re: RegExp; ops: ApplicableOp[] }[] = [
   { re: /\bgroup(ed)? (it |them )?by (topic|scope|area)s?\b/i, ops: [{ op: "group", by: "scope" }] },
   { re: /\bheadlines only\b|\bjust (the )?headlines\b/i, ops: [{ op: "parts", paragraphs: "none", means: false, figures: null, sources: null, oneLiners: null }] },
   { re: /\bnewest first\b|\blatest first\b/i, ops: [{ op: "order", by: "newest" }] },
+  {
+    re: /\b(hide|remove|drop|no|without) (the )?(threads?|currents?)( to follow)?\b/i,
+    ops: [{ op: "sections", currents: false, updates: null }],
+  },
+  { re: /\bshow (the )?(threads?|currents?)( to follow)?( again)?\b/i, ops: [{ op: "sections", currents: true, updates: null }] },
+  {
+    re: /\b(hide|remove|drop|no|without) (the )?(figures?|charts?|tables?|graphs?)\b/i,
+    ops: [{ op: "parts", paragraphs: null, means: null, figures: "hide", sources: null, oneLiners: null }],
+  },
+  {
+    re: /\bshow (the )?(figures?|charts?|graphs?)( again)?\b/i,
+    ops: [{ op: "parts", paragraphs: null, means: null, figures: "show", sources: null, oneLiners: null }],
+  },
+  {
+    re: /\b(hide|remove|drop|no|without) (the )?(sources?|links?)\b/i,
+    ops: [{ op: "parts", paragraphs: null, means: null, figures: null, sources: false, oneLiners: null }],
+  },
 ]
 
 // Filler that may surround a shortcut without changing what it means.

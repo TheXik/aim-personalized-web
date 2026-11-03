@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import type { KeyboardEvent, ReactNode } from "react"
 import { AimMark } from "@/components/brief/aim-mark"
 import type { Offer } from "@/lib/view/reply"
+import { contactLine, type ContactOffer } from "@/lib/chat/contact"
 
 // "Change what you see": the chat that reshapes the page. It only changes the view,
 // it never answers questions or writes text. Its look follows Aim's own "Ask Aim"
@@ -15,7 +16,18 @@ export type ChatStep = { title: string; detail?: string | null; meta?: string | 
 export type ChatTurn =
   | { id: string; role: "user"; text: string }
   | { id: string; role: "assistant"; state: "pending" }
-  | { id: string; role: "assistant"; state: "done" | "error"; text: string; steps: ChatStep[]; offer: Offer | null }
+  | {
+      id: string
+      role: "assistant"
+      state: "done" | "error"
+      text: string
+      steps: ChatStep[]
+      offer: Offer | null
+      // What the reader asked, for "Ask your own AI" and the direct line.
+      request: string
+      askAi: { question: string } | null
+      contact: ContactOffer | null
+    }
 
 export type Suggestion = { label: string; run: () => void }
 
@@ -29,6 +41,8 @@ export function ChatPanel({
   viewControls,
   onSend,
   onOffer,
+  onAskAi,
+  contactHref,
   onClose,
   sheet,
   onSheet,
@@ -43,6 +57,10 @@ export function ChatPanel({
   viewControls: ReactNode
   onSend: (text: string) => void
   onOffer: (turnId: string, offer: Offer) => void
+  // Copies the whole brief with the question on top. Resolves true when copied.
+  onAskAi: (question: string) => Promise<boolean>
+  // The "Tell Lukáš" mailto for a request (or for no request), null when there is no address.
+  contactHref: (request?: string) => string | null
   onClose: () => void
   sheet?: "half" | "full"
   onSheet?: (s: "half" | "full") => void
@@ -148,33 +166,14 @@ export function ChatPanel({
                     <p className="turn__text turn__text--pending">Changing your view</p>
                   </div>
                 ) : (
-                  <div className="turn__aim">
-                    <span className={t.state === "error" ? "turn__avatar is-error" : "turn__avatar"} aria-hidden="true">
-                      <AimMark size={16} spin={false} />
-                    </span>
-                    <div className="turn__body">
-                      <p className="turn__text">{t.text}</p>
-                      {t.steps.length > 0 ? (
-                        <ol className="steps">
-                          {t.steps.map((s, i) => (
-                            <li key={i} className="step">
-                              <span className="step__n">{String(i + 1).padStart(2, "0")}</span>
-                              <span className="step__title">{s.title}</span>
-                              {s.meta ? <span className="step__meta">{s.meta}</span> : null}
-                              {s.detail ? <span className="step__detail">{s.detail}</span> : null}
-                            </li>
-                          ))}
-                        </ol>
-                      ) : null}
-                      {t.offer && t.id === lastId ? (
-                        <div className="chat__suggest">
-                          <button type="button" className="chip chip--plain chip--offer" disabled={busy} onClick={() => onOffer(t.id, t.offer!)}>
-                            {t.offer.label}
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
+                  <AssistantTurn
+                    turn={t}
+                    isLast={t.id === lastId}
+                    busy={busy}
+                    onOffer={onOffer}
+                    onAskAi={onAskAi}
+                    contactHref={contactHref}
+                  />
                 )}
               </li>
             ))}
@@ -209,7 +208,107 @@ export function ChatPanel({
           </svg>
         </button>
       </form>
+      {contactHref() ? (
+        <p className="chat__foot">
+          <a className="chat__tell" href={contactHref() ?? undefined}>
+            Tell Lukáš
+          </a>
+        </p>
+      ) : null}
     </section>
+  )
+}
+
+/**
+ * One reply from Aim. When the page could not do what the reader asked, the next
+ * steps come one at a time: the closest view as one click, then "Ask your own AI"
+ * (the whole brief with the question on top), then the direct line to Lukáš.
+ */
+function AssistantTurn({
+  turn,
+  isLast,
+  busy,
+  onOffer,
+  onAskAi,
+  contactHref,
+}: {
+  turn: Extract<ChatTurn, { role: "assistant"; state: "done" | "error" }>
+  isLast: boolean
+  busy: boolean
+  onOffer: (turnId: string, offer: Offer) => void
+  onAskAi: (question: string) => Promise<boolean>
+  contactHref: (request?: string) => string | null
+}) {
+  const [declined, setDeclined] = useState(false)
+  const [asked, setAsked] = useState<"idle" | "copied" | "failed">("idle")
+  const offer = isLast && !declined ? turn.offer : null
+  // "Ask your own AI" comes right away when there is no offer, else once the reader says the offer is not it.
+  const showAsk = isLast && !!turn.askAi && (!turn.offer || declined)
+  const href = turn.contact ? contactHref(turn.request) : null
+  // The direct line: right away when the reader sounds frustrated, else as the last step,
+  // once the reader is past the offer (declined it, or there was none).
+  const pastOffer = !turn.offer || declined
+  const showContact = isLast && !!href && (turn.contact?.when === "now" || pastOffer)
+  return (
+    <div className="turn__aim">
+      <span className={turn.state === "error" ? "turn__avatar is-error" : "turn__avatar"} aria-hidden="true">
+        <AimMark size={16} spin={false} />
+      </span>
+      <div className="turn__body">
+        <p className="turn__text">{turn.text}</p>
+        {turn.steps.length > 0 ? (
+          <ol className="steps">
+            {turn.steps.map((s, i) => (
+              <li key={i} className="step">
+                <span className="step__n">{String(i + 1).padStart(2, "0")}</span>
+                <span className="step__title">{s.title}</span>
+                {s.meta ? <span className="step__meta">{s.meta}</span> : null}
+                {s.detail ? <span className="step__detail">{s.detail}</span> : null}
+              </li>
+            ))}
+          </ol>
+        ) : null}
+        {offer ? (
+          <div className="next">
+            <button type="button" className="next__primary" disabled={busy} onClick={() => onOffer(turn.id, offer)}>
+              {offer.label}
+            </button>
+            {turn.askAi || turn.contact ? (
+              <button type="button" className="linkbtn next__no" onClick={() => setDeclined(true)}>
+                Not what I meant
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {showAsk && turn.askAi ? (
+          <div className="next next--ask">
+            <p className="next__text">Your own AI can answer it from this week&apos;s brief.</p>
+            <button
+              type="button"
+              className="next__primary"
+              onClick={async () => setAsked((await onAskAi(turn.askAi!.question)) ? "copied" : "failed")}
+            >
+              {asked === "copied" ? "Copied" : "Ask your own AI"}
+            </button>
+            <p className="next__hint" role="status">
+              {asked === "copied"
+                ? "Copied your question and the whole brief. Paste it into the AI you use."
+                : asked === "failed"
+                  ? "Copy did not work in this browser. Use Copy for your agent at the top."
+                  : "Copies your question and the whole brief, with the links, for your AI."}
+            </p>
+          </div>
+        ) : null}
+        {showContact && href ? (
+          <p className="next next--contact">
+            {contactLine()}{" "}
+            <a className="chat__tell" href={href}>
+              Write to Lukáš
+            </a>
+          </p>
+        ) : null}
+      </div>
+    </div>
   )
 }
 

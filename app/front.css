@@ -319,6 +319,25 @@
 .hook__src { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fp__figure .fp__head { min-width: 0; }
 /* Group names in a grouped view read as tags, a touch stronger than area names. */
-.also__group { color: var(--b-meta); }
+.also__group { color: var(--b-meta); max-width: 30%; }
 /* The "nothing matched" notice sits where the kicker was. */
 .fp__notice { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--aim-amber-ink); }
+
+/* ---------- When the page cannot do it: offer, then your own AI, then Lukáš ---------- */
+
+.next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+.next--ask, .next--contact { flex-direction: column; align-items: flex-start; gap: 8px; padding-top: 12px; border-top: 1px solid var(--b-line); }
+.next__primary {
+  height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--n-900); background: var(--n-900); color: #fff; cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 500; transition: background var(--dur-hover) var(--ease-standard);
+}
+.next__primary:hover { background: var(--accent-gradient); border-color: transparent; }
+.next__primary:disabled { opacity: 0.5; cursor: default; }
+.next__no { font-size: 12.5px; }
+.next__text { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--b-meta); }
+.next__hint { margin: 0; font-size: 12px; line-height: 1.45; color: var(--b-muted); }
+.next--contact { font-size: 13px; line-height: 1.5; color: var(--b-meta); margin: 12px 0 0; }
+.chat__tell { color: var(--b-ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px; }
+.chat__tell:hover { text-decoration-color: var(--b-ink); }
+.chat__foot { margin: -6px 0 0; padding: 0 20px 12px; min-height: 0; font-size: 12px; text-align: right; }
+.chat__foot .chat__tell { font-weight: 400; color: var(--b-muted); }

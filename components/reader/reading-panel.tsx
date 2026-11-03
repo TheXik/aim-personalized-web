@@ -233,7 +233,11 @@ function ThreadBody({
   onOpen: (r: Reading) => void
   index: number
 }) {
-  const stories = thread.itemKeys.map((k) => order.find((i) => i.key === k)).filter((x): x is Item => !!x)
+  // A current reads as a timeline: newest first, Aim's order kept on equal dates (the sort is stable).
+  const stories = thread.itemKeys
+    .map((k) => order.find((i) => i.key === k))
+    .filter((x): x is Item => !!x)
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
   const hidden = thread.itemKeys.length - stories.length
   return (
     <article className="rp__story" aria-labelledby="rp-h">
@@ -251,13 +255,16 @@ function ThreadBody({
       <p className="rp__lede">{thread.line}</p>
       {thread.figure && parts.figures !== "hide" ? <Figure figure={thread.figure} threadLabel={thread.label} /> : null}
       <div className="rp__list">
-        <span className="eyebrow">{stories.length === 1 ? "1 story in this thread" : `${stories.length} stories in this thread`}</span>
+        <span className="eyebrow">{stories.length === 1 ? "1 story in this current" : `${stories.length} stories in this current`}</span>
         <ul>
           {stories.map((s) => (
             <li key={s.key}>
               <button type="button" className="rp__row" onClick={() => onOpen({ kind: "story", key: s.key })}>
                 <span className="rp__rowdate">{formatDay(s.date)}</span>
-                <span className="rp__rowtext">{s.headline}</span>
+                <span className="rp__rowtext">
+                  {s.headline}
+                  {s.tier === "detail" ? <span className="rp__rowtag">In detail</span> : null}
+                </span>
               </button>
             </li>
           ))}

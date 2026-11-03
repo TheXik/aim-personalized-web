@@ -74,6 +74,7 @@
 .rp__row:hover .rp__rowtext { text-decoration: underline; text-decoration-color: var(--b-faint); text-underline-offset: 3px; }
 .rp__rowdate { font-family: var(--b-mono); font-size: 10.5px; line-height: 22px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--b-faint); }
 .rp__rowtext { font-size: 15px; line-height: 1.45; color: var(--b-title); }
+.rp__rowtag { margin-left: 8px; padding: 1px 6px; border-radius: 4px; background: var(--b-paper); font-family: var(--b-mono); font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--b-muted); vertical-align: 1px; white-space: nowrap; }
 .rp__new { color: var(--b-new); font-size: 9px; margin-right: 6px; vertical-align: 2px; }
 .rp__note { margin: 10px 0 0; font-size: 13px; color: var(--b-muted); }
 .rp__empty { color: var(--b-muted); font-size: 18px; }

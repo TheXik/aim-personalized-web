@@ -10,7 +10,7 @@ Built by Lukáš Hellesch as the Aim hiring take-home, 3 Nov 2026. Why each choi
 
 Three ways, easiest first.
 
-**About the data.** This public repo does not include Aim's three sample briefs. For options 2 and 3, copy the three JSON files from the assignment into `data/briefs/` with their names unchanged: `brief-space-launch.json`, `brief-enterprise-ai.json` and `brief-cz-sk-ai.json`. Without them the app shows a message instead of a brief, and the tests run on synthetic briefs. The live site has the data.
+**About the data.** This public repo does not include Aim's three sample briefs. For options 2 and 3, copy the three JSON files from the assignment into `data/briefs/` with their names unchanged: `brief-space-launch.json`, `brief-enterprise-ai.json` and `brief-cz-sk-ai.json`. Without them the app shows a message instead of a brief, and the tests run on synthetic briefs. If you add the files while the app is running, restart it. The live site has the data.
 
 ### 1. Live
 
@@ -57,7 +57,7 @@ pnpm test                     # no model calls
 pnpm dev                      # http://localhost:3000
 ```
 
-To turn on the live chat, put your key after `AZURE_OPENAI_API_KEY=` in `.env.local` and add a line `CHAT_LIVE=1`. Then restart `pnpm dev`.
+To turn on the live chat, put your key after `AZURE_OPENAI_API_KEY=` in `.env.local` and set `CHAT_LIVE=1`. Then restart `pnpm dev`. `MODEL_BUDGET_USD` sets the daily spend cap (see [Spend caps](#spend-caps)).
 
 **Works without a key** (with the three briefs in `data/briefs/`):
 - All three reader pages, every figure type, the phone, tablet and laptop layouts.

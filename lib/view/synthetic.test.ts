@@ -277,3 +277,28 @@ describe("questions: closest view first, then ask your own AI", () => {
     expect(out).toContain(orbital.verdict)
   })
 })
+
+describe("offline mode by config", () => {
+  const offline = async (request: string) =>
+    handleChat({ request, spec: DEFAULT_SPEC }, { brief: orbital, callModel: async () => ({ ok: false, reason: "offline" }) })
+
+  it("says live chat is off instead of claiming an outage", async () => {
+    const r = await offline("put the insurance stories next to the launch ones")
+    expect(r.changed).toBe(false)
+    expect(r.reply).toMatch(/^Live chat is off on this server/)
+  })
+
+  it("handles 'remove the threads to follow' with a shortcut, without the outage prefix", async () => {
+    const r = await offline("remove the threads to follow")
+    expect(r).toMatchObject({ changed: true, source: "offline" })
+    expect(r.spec.sections.currents).toBe(false)
+    expect(r.reply).toBe("Hiding the threads.")
+  })
+
+  it("covers figures and sources too", async () => {
+    const { matchOffline } = await import("@/lib/chat/offline")
+    expect(matchOffline("hide the charts")?.[0]).toMatchObject({ op: "parts", figures: "hide" })
+    expect(matchOffline("no sources please")?.[0]).toMatchObject({ op: "parts", sources: false })
+    expect(matchOffline("show the threads again")?.[0]).toMatchObject({ op: "sections", currents: true })
+  })
+})

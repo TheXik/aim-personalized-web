@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       callModel: async (userPrompt): Promise<ModelResult> => {
         // x-chat-offline: 1 forces the built-in shortcuts. It can only lower spend,
         // so it is safe to honour from anyone. The post-deploy smoke test uses it.
-        if (offlineMode() || req.headers.get("x-chat-offline") === "1") return { ok: false, reason: "error" }
+        if (offlineMode() || req.headers.get("x-chat-offline") === "1") return { ok: false, reason: "offline" }
         if (!takeModelCall()) return { ok: false, reason: "rate_limited" }
         const r = await callStructured({ label: "chat", system: VIEW_EDITOR_PROMPT, prompt: userPrompt, schema: Edit })
         return r.ok ? { ok: true, output: r.output } : { ok: false, reason: r.reason }

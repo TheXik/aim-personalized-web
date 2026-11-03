@@ -22,7 +22,9 @@ export function ReadingPanel({
   showUpdates,
   onOpen,
   onClose,
+  modal,
 }: {
+  modal: boolean
   reading: Reading
   order: Item[]
   threads: Current[]
@@ -66,7 +68,7 @@ export function ReadingPanel({
         : "More this week"
 
   return (
-    <div className="rp" role="dialog" aria-modal="false" aria-label="Reading panel">
+    <div className="rp" role="dialog" aria-modal={modal} aria-labelledby="rp-h">
       <div className="rp__bar">
         <span className="rp__pos">{position}</span>
         <span className="rp__spacer" />
@@ -107,7 +109,7 @@ export function ReadingPanel({
         ) : reading.kind === "more" ? (
           <MoreBody items={moreItems} heading={heading} onOpen={onOpen} />
         ) : (
-          <h2 className="rp__headline rp__empty" ref={heading} tabIndex={-1}>
+          <h2 className="rp__headline rp__empty" id="rp-h" ref={heading} tabIndex={-1}>
             This is no longer in your view.
           </h2>
         )}

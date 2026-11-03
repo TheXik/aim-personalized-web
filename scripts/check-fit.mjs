@@ -1,5 +1,7 @@
 // Checks that the laptop front page fits one screen: no page scroll and no
 // region that overflows, for every reader, at 1280x800 and 1440x900.
+// With the "Change what you see" panel open the page makes room for it, so the
+// front column may scroll inside itself. The page itself must still never scroll.
 // No dependencies: drives a local Chrome over the DevTools protocol.
 //
 //   pnpm dev                     (in another terminal)
@@ -33,13 +35,15 @@ const VIEWS = {
   "numbers-first": { ...DEFAULT, pins: [{ id: "p1", where: { op: "has_number" }, to: "top", label: null, expires: null }] },
   "by-company": { ...DEFAULT, group: "company" },
   "only-new": { ...DEFAULT, filters: [{ id: "f1", mode: "keep", where: { op: "eq", field: "status", value: "new" }, expires: null }] },
+  // A saved rule that matches nothing this week: the page says so and shows the full brief.
+  "nothing-matches": { ...DEFAULT, filters: [{ id: "f1", mode: "keep", where: { op: "contains", field: "headline", values: ["zzqx"] }, expires: null }] },
 }
 
 const CASES = []
 for (const reader of READERS) {
   for (const [w, h] of [[1280, 800], [1440, 900]]) CASES.push({ reader, w, h, chat: false, view: "default" })
   CASES.push({ reader, w: 1440, h: 900, chat: true, view: "default" })
-  for (const view of ["numbers-first", "by-company", "only-new"]) CASES.push({ reader, w: 1280, h: 800, chat: false, view })
+  for (const view of ["numbers-first", "by-company", "only-new", "nothing-matches"]) CASES.push({ reader, w: 1280, h: 800, chat: false, view })
 }
 
 function chromePath() {
@@ -165,11 +169,15 @@ async function main() {
         console.log(`FAIL ${label} page did not render`)
         continue
       }
-      const bad = m.regions.filter((r) => r.overflow > 1 || r.overflowX > 1)
+      const front = m.regions.find((r) => r.name === "front page")
+      const columnScroll = c.chat && front && front.overflow > 1 ? front.overflow : 0
+      const bad = m.regions.filter((r) => (r.overflow > 1 && !(c.chat && r.name === "front page")) || r.overflowX > 1)
       const ok = m.pageOverflow <= 1 && bad.length === 0
       if (!ok) failed++
       const detail = ok
-        ? `fits, ${m.spare}px to spare`
+        ? columnScroll
+          ? `page fits, front column scrolls ${columnScroll}px while the chat is open`
+          : `fits, ${m.spare}px to spare`
         : `page overflow ${m.pageOverflow}px${bad.map((r) => `, ${r.name} overflows ${Math.max(r.overflow, r.overflowX)}px`).join("")}`
       console.log(`${ok ? "ok  " : "FAIL"} ${label} ${detail}`)
     }

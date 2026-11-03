@@ -96,8 +96,12 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const changes = spec.filters.length + spec.pins.length + settings.length
 
   // The reading panel is part of the browser history, so Back closes it (phones especially).
+  // Where focus goes back to when the panel closes: the card or row that opened it.
+  const returnTo = useRef<HTMLElement | null>(null)
+  const restoreFocus = () => requestAnimationFrame(() => returnTo.current?.focus())
   const openReading = useCallback(
     (r: Reading) => {
+      if (!reading && document.activeElement instanceof HTMLElement) returnTo.current = document.activeElement
       const hash = `#${r.kind === "story" ? `story-${r.key.split(":").pop()}` : r.kind === "thread" ? "thread" : "more"}`
       if (reading) window.history.replaceState({ aimReading: true }, "", hash)
       else window.history.pushState({ aimReading: true }, "", hash)
@@ -107,15 +111,28 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   )
   const closeReading = useCallback(() => {
     if (window.history.state?.aimReading) window.history.back()
-    else setReading(null)
+    else {
+      setReading(null)
+      restoreFocus()
+    }
   }, [])
   useEffect(() => {
     const onPop = () => {
-      if (!window.history.state?.aimReading) setReading(null)
+      if (!window.history.state?.aimReading) {
+        setReading(null)
+        restoreFocus()
+      }
     }
     window.addEventListener("popstate", onPop)
     return () => window.removeEventListener("popstate", onPop)
   }, [])
+
+  // On a phone the half sheet covers the page, so after a change close it and show the result.
+  const showChangeOnPhone = useCallback(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) return
+    setChatOpen(false)
+    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })
+  }, [setChatOpen])
 
   const send = useCallback(
     async (text: string) => {
@@ -135,7 +152,10 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
         })
         const data = (await res.json().catch(() => ({}))) as { spec?: unknown; reply?: unknown; changed?: unknown; offer?: Offer | null }
         if (!res.ok && typeof data.reply !== "string") throw new Error(String(res.status))
-        if (res.ok && data.changed === true && data.spec) saveSpec(parseStoredSpec(data.spec))
+        if (res.ok && data.changed === true && data.spec) {
+          saveSpec(parseStoredSpec(data.spec))
+          showChangeOnPhone()
+        }
         reply = {
           id: `${id}a`,
           role: "assistant",
@@ -162,7 +182,7 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
       }
       setTurns((t) => t.map((x) => (x.id === reply.id ? reply : x)))
     },
-    [busy, reader, spec, saveSpec],
+    [busy, reader, spec, saveSpec, showChangeOnPhone],
   )
 
   // An offer ("did you mean...") applies in code, with no model call.
@@ -170,7 +190,10 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
     if (!brief) return
     const result = applyOps(spec, offer.ops, { brief, request: offerRequest.current })
     const r = composeReply(brief, spec, result, offerRequest.current)
-    if (r.changed) saveSpec(result.spec)
+    if (r.changed) {
+      saveSpec(result.spec)
+      showChangeOnPhone()
+    }
     setTurns((t) => [
       ...t.map((x) => (x.id === turnId && x.role === "assistant" && x.state !== "pending" ? { ...x, offer: null } : x)),
       { id: `${Date.now()}u`, role: "user", text: offer.label },
@@ -182,7 +205,11 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
   const reset = () => saveSpec(DEFAULT_SPEC)
   const removeRule = (id: string) =>
     saveSpec({ ...spec, filters: spec.filters.filter((f) => f.id !== id), pins: spec.pins.filter((p) => p.id !== id) })
-  const closeChat = useCallback(() => setChatOpen(false), [setChatOpen])
+  const closeChat = useCallback(() => {
+    setChatOpen(false)
+    setFocusChat(false)
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(".tb__chat, .dock__field")?.focus())
+  }, [setChatOpen])
 
   if (load.state !== "ready" || !view || !brief || !fp) {
     return (
@@ -207,27 +234,29 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
     />
   )
 
+  // On a laptop the reading panel and the chat do not stack. Opening the chat closes the panel.
+  const chatShown = chatOpen && !(reading && desk)
+  const openChat = () => {
+    if (reading && desk) closeReading()
+    setFocusChat(desk)
+    setChatOpen(true)
+  }
+
   return (
-    <div className="app" data-chat={chatOpen ? "open" : "closed"} data-sheet={!desk && chatOpen ? sheet : undefined}>
+    <div className="app" data-chat={chatShown ? "open" : "closed"} data-sheet={!desk && chatOpen ? sheet : undefined}>
       <TopBar
         periodStart={view.periodStart}
         periodEnd={view.periodEnd}
         changes={changes}
         hidden={view.hiddenTotal}
-        chatOpen={chatOpen}
-        onChat={() => {
-          setFocusChat(!chatOpen)
-          setChatOpen(!chatOpen)
-        }}
-        onOpenChat={() => {
-          setFocusChat(true)
-          setChatOpen(true)
-        }}
+        chatOpen={chatShown}
+        onChat={() => (chatShown ? closeChat() : openChat())}
+        onOpenChat={openChat}
         getMarkdown={() => toAgentMarkdown({ view, settings: settings.map((c) => c.label) })}
         showChatButton={desk}
       />
       <main className="app__main" data-front-ready>
-        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} stacked={!desk} />
+        <FrontPage view={view} fp={fp} also={fp.also} onOpen={openReading} stacked={!desk} inert={Boolean(reading)} />
         {reading ? (
           <div className="rp-layer">
             <div className="rp-scrim" onClick={closeReading} aria-hidden="true" />
@@ -240,11 +269,12 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
               showUpdates={view.updates !== null}
               onOpen={openReading}
               onClose={closeReading}
+              modal={desk}
             />
           </div>
         ) : null}
       </main>
-      {chatOpen && !(reading && desk) ? (
+      {chatShown ? (
         <ChatPanel
           variant={desk ? "card" : "sheet"}
           sheet={sheet}
@@ -256,16 +286,13 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
           onSend={send}
           onOffer={takeOffer}
           onClose={closeChat}
-          autoFocus={focusChat}
+          autoFocus={focusChat && desk}
         />
       ) : null}
       {!desk && !chatOpen ? (
         <ChatDock
           changes={changes}
-          onOpen={() => {
-            setFocusChat(true)
-            setChatOpen(true)
-          }}
+          onOpen={openChat}
         />
       ) : null}
     </div>

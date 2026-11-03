@@ -78,7 +78,7 @@
   max-width: calc(var(--fp-max) + 2 * var(--fp-pad-x)); margin: 0 auto; padding: var(--fp-top) var(--fp-pad-x) 20px;
   display: flex; flex-direction: column; gap: var(--fp-gap);
 }
-@media (min-width: 1024px) { .fp { height: 100%; overflow: hidden; } }
+@media (min-width: 1024px) { .fp { height: 100%; overflow-y: auto; overscroll-behavior: contain; } }
 @media (max-width: 1023px) { .fp { --fp-pad-x: 20px; padding-bottom: 96px; gap: 36px; } }
 
 .fp__row { display: grid; gap: 56px; align-items: start; }
@@ -115,7 +115,7 @@
 /* ---------- Takeaways ---------- */
 
 .tk { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
-.tk__item { display: grid; grid-template-columns: 3px minmax(0, 1fr); column-gap: 16px; }
+.tk__item { position: relative; display: grid; grid-template-columns: 3px minmax(0, 1fr); column-gap: 16px; cursor: pointer; }
 .tk__item::before {
   content: ""; grid-row: 1 / 3; border-radius: 3px; background: linear-gradient(180deg, var(--blue-600), var(--blue-400)); box-shadow: var(--shadow-quote-bar);
 }
@@ -125,7 +125,8 @@
   font-family: var(--b-mono); font-size: 11.5px; line-height: 1.5; color: var(--b-muted);
 }
 .tk__why span { color: var(--b-meta); text-decoration: underline; text-decoration-color: var(--b-line-strong); text-underline-offset: 3px; }
-.tk__why:hover span { color: var(--b-ink); text-decoration-color: var(--b-faint); }
+.tk__why::after { content: ""; position: absolute; inset: 0; }
+.tk__item:hover .tk__why span, .tk__why:hover span { color: var(--b-ink); text-decoration-color: var(--b-faint); }
 
 /* ---------- Threads ---------- */
 
@@ -266,5 +267,57 @@
   .fp { padding-bottom: 12px; }
   .fig--hook { padding: 13px 16px 14px; }
   .fig--hook .fig__body { margin-top: 10px; }
-  .card__line { -webkit-line-clamp: 1; }
 }
+
+/* ---------- Review fixes ---------- */
+
+/* A focus ring you can see (the token ring is 1.2:1 on white). */
+.app :focus-visible { outline: 2px solid var(--blue-600); outline-offset: 2px; }
+.app .hook__open:focus-visible, .app .tk__why:focus-visible { outline: none; }
+.app .hook__open:focus-visible::after, .app .tk__why:focus-visible::after { outline: 2px solid var(--blue-600); outline-offset: 4px; border-radius: 10px; }
+.app .rp__headline:focus-visible { outline: none; }
+
+/* Section labels on the front page: darker than the faint token so they pass AA as signposts. */
+.fp .eyebrow, .fp__hint, .hook__open, .card__age, .also__scope { color: #77726f; }
+
+/* The open chat makes room on a laptop instead of covering the right column.
+   The front page may then scroll inside its own column while the reader changes the view. */
+@media (min-width: 1024px) {
+  .app[data-chat="open"] .app__main { margin-right: 400px; }
+  .app[data-chat="open"] .fp { --fp-pad-x: 40px; }
+  .app[data-chat="open"] .fp__row { gap: 32px; }
+}
+
+/* Screens shorter than 800px: one more step down before anything scrolls. */
+@media (min-width: 1024px) and (max-height: 780px) {
+  .card__line, .fp__hint { display: none; }
+  .fp__kicker { margin-bottom: 6px; }
+  .app { --fp-verdict: 26px; }
+}
+
+/* Tablet portrait: two thread cards per row, and a floating chat card instead of a wide sheet. */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; border-top: 0; }
+  .card { border: 1px solid var(--b-line-strong); border-radius: 10px; padding: 14px 16px; }
+}
+
+/* Touch targets of at least 44px on touch layouts. */
+@media (max-width: 1023px) {
+  .rp__nav, .rp__close, .chat__close { width: 44px; height: 44px; }
+}
+
+/* Reduced motion: no slides, pops, blinking caret or lifts. */
+@media (prefers-reduced-motion: reduce) {
+  .chat--card, .chat--sheet, .turn, .chip, .rp, .rp-scrim, .item__body { animation: none !important; }
+  .turn__text--pending::after { animation: none; }
+  .card:hover { transform: none; }
+}
+
+/* The figure names the story it comes from, in the header row (no extra height). */
+.hook__open { min-width: 0; max-width: 62%; }
+.hook__src { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp__figure .fp__head { min-width: 0; }
+/* Group names in a grouped view read as tags, a touch stronger than area names. */
+.also__group { color: var(--b-meta); }
+/* The "nothing matched" notice sits where the kicker was. */
+.fp__notice { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--aim-amber-ink); }

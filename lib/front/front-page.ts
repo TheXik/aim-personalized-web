@@ -22,6 +22,10 @@ export type FrontPage = {
   // Every visible item in view order: the reading panel steps through this.
   order: Item[]
   grouped: boolean
+  // When the reader groups the page (by company, thread or area): each item's group name.
+  groupOf: Record<string, string>
+  // The reader's own name for the one-liners section ("Also this week" by default), if they renamed it.
+  alsoTitle: string | null
 }
 
 export const MAX_TAKEAWAYS = 2
@@ -32,13 +36,17 @@ export function buildFrontPage(view: PageView): FrontPage {
 
   const order: Item[] = []
   const seen = new Set<string>()
+  const groupOf: Record<string, string> = {}
   for (const s of sections) {
     for (const item of s.items) {
       if (seen.has(item.key)) continue
       seen.add(item.key)
       order.push(item)
+      if (s.kind === "group") groupOf[item.key] = s.title
     }
   }
+  const oneLinerSection = sections.find((s) => s.key === "tier:one_liner")
+  const alsoTitle = oneLinerSection && oneLinerSection.titleSource === "reader" ? oneLinerSection.title : null
 
   const stories = order.filter((i) => i.tier !== "one_liner")
   const oneLiners = order.filter((i) => i.tier === "one_liner")
@@ -74,5 +82,7 @@ export function buildFrontPage(view: PageView): FrontPage {
     oneLiners,
     order,
     grouped,
+    groupOf,
+    alsoTitle,
   }
 }

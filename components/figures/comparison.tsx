@@ -9,7 +9,7 @@ export function Comparison({ block }: { block: ComparisonBlock }) {
   return (
     <div className="cmp">
       <section className="cmp__side cmp__side--them" aria-label={block.them.name}>
-        <h5 className="cmp__name">{block.them.name}</h5>
+        <p className="cmp__name">{block.them.name}</p>
         <ul className="cmp__list">
           {block.them.points.map((p, i) => (
             <li key={i}>{p.text}</li>
@@ -22,7 +22,7 @@ export function Comparison({ block }: { block: ComparisonBlock }) {
         </svg>
       </span>
       <section className="cmp__side cmp__side--us" aria-label={block.us.name}>
-        <h5 className="cmp__name">{block.us.name}</h5>
+        <p className="cmp__name">{block.us.name}</p>
         <ul className="cmp__list">
           {block.us.points.map((p, i) => (
             <li key={i}>{p.text}</li>

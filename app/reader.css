@@ -15,7 +15,7 @@
 }
 @keyframes rp-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes rp-fade { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .rp, .rp-scrim { animation: none; } }
+
 
 .rp__bar { flex: none; height: 52px; display: flex; align-items: center; gap: 6px; padding: 0 12px 0 28px; border-bottom: 1px solid var(--b-line); }
 .rp__pos { font-family: var(--b-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--b-faint); }
@@ -73,8 +73,8 @@
 .rp__nexthl { font-size: 14.5px; font-weight: 500; color: var(--b-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rp__next:hover .rp__nexthl { text-decoration: underline; text-decoration-color: var(--b-faint); text-underline-offset: 3px; }
 
-/* Phone and tablet portrait: a full-screen sheet that slides up. */
-@media (max-width: 839px) {
+/* Every stacked layout (below 1024px, as in brief-app.tsx): a full-screen sheet that slides up. */
+@media (max-width: 1023px) {
   .rp-layer { position: fixed; z-index: 60; }
   .rp-scrim { display: none; }
   .rp { width: 100%; border-left: 0; box-shadow: none; animation: rp-up 300ms var(--ease-out); }

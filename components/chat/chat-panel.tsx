@@ -54,8 +54,12 @@ export function ChatPanel({
   const lastId = turns[turns.length - 1]?.id
 
   useEffect(() => {
-    if (turns.length > 0) scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })
+    if (turns.length === 0) return
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: reduce ? "auto" : "smooth" })
   }, [turns])
+  const last = turns[turns.length - 1]
+  const status = !last || last.role === "user" ? "" : last.state === "pending" ? "Changing your view" : last.text
 
   useEffect(() => {
     if (autoFocus) input.current?.focus({ preventScroll: true })
@@ -74,6 +78,7 @@ export function ChatPanel({
     if (!t || busy) return
     onSend(t.slice(0, MAX_MESSAGE))
     setText("")
+    input.current?.focus({ preventScroll: true })
   }
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -109,6 +114,9 @@ export function ChatPanel({
         </button>
       </header>
 
+      <p className="sr-only" role="status" aria-live="polite">
+        {status}
+      </p>
       <div className="chat__scroll" ref={scroller}>
         {viewControls}
         {turns.length === 0 ? (
@@ -212,7 +220,7 @@ export function ChatDock({ changes, onOpen }: { changes: number; onOpen: () => v
       <button type="button" className="dock__field" onClick={onOpen} aria-controls="change-panel" aria-expanded={false}>
         <AimMark size={16} spin={false} />
         <span>Change what you see</span>
-        {changes > 0 ? <span className="dock__count">{changes}</span> : null}
+        {changes > 0 ? <span className="dock__count">{changes === 1 ? "1 change" : `${changes} changes`}</span> : null}
       </button>
     </div>
   )

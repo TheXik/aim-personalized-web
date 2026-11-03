@@ -206,7 +206,7 @@
   border-top: 1px solid var(--b-line-strong); border-radius: 16px 16px 0 0; box-shadow: 0 -12px 32px -16px #0a0a0a29;
   animation: popIn 260ms var(--ease-out);
 }
-.chat__grabber { display: grid; place-items: center; height: 18px; border: 0; background: none; cursor: grab; flex: none; }
+.chat__grabber { display: grid; place-items: center; height: 28px; border: 0; background: none; cursor: pointer; flex: none; }
 .chat__grabber span { width: 36px; height: 4px; border-radius: 999px; background: var(--b-line-strong); }
 .chat__head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 20px 14px; border-bottom: 1px solid var(--b-line); flex: none; }
 .chat--sheet .chat__head { padding-top: 4px; }
@@ -272,4 +272,3 @@
 .dock__field svg { color: var(--b-ink); flex: none; }
 .dock__field span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dock__count { min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--b-ink); color: #fff; font-family: var(--b-mono); font-size: 11px; display: grid; place-items: center; }
-@media (min-width: 840px) { .dock { display: none; } }

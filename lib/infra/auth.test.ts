@@ -128,3 +128,13 @@ describe("POST /api/login", () => {
     }
   })
 })
+
+describe("sitePassword", () => {
+  it("fails closed in production when the password is short", async () => {
+    const { sitePassword } = await import("./auth")
+    expect(sitePassword({ SITE_PASSWORD: "short-pass", NODE_ENV: "production" })).toBeNull()
+    expect(sitePassword({ SITE_PASSWORD: "a-long-random-password-23", NODE_ENV: "production" })).toBe("a-long-random-password-23")
+    expect(sitePassword({ SITE_PASSWORD: "", NODE_ENV: "production" })).toBeNull()
+    expect(sitePassword({ SITE_PASSWORD: "short-pass", NODE_ENV: "development" })).toBe("short-pass")
+  })
+})

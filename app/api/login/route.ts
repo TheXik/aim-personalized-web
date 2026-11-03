@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { cookieOptions, createSession, passwordMatches, safeNext, SESSION_COOKIE } from "@/lib/infra/auth"
+import { cookieOptions, createSession, passwordMatches, safeNext, SESSION_COOKIE, sitePassword } from "@/lib/infra/auth"
 
 // POST /api/login  form fields: password, next
 // Right password: sets the session cookie and goes to `next`.
 // Wrong password: back to /login with an error, after a short pause to slow guessing.
 
 export async function POST(request: Request) {
-  const password = process.env.SITE_PASSWORD
+  const password = sitePassword()
   if (!password) return new NextResponse("Not configured.", { status: 503 })
 
   const form = await request.formData().catch(() => null)

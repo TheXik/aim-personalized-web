@@ -4,6 +4,20 @@
 // in production, so it only uses Web APIs (crypto.subtle, TextEncoder, btoa).
 
 export const SESSION_COOKIE = "aim_session"
+
+// The cookie is signed with the password and the login has no rate limit, which
+// is safe only with a long random password (offline and online guessing are then
+// out of reach). So production treats anything shorter than this as unset.
+export const MIN_PASSWORD_LENGTH = 16
+
+// The site password, or null when the gate is not configured. In production a
+// short password counts as not configured, so the site fails closed with a 503.
+export function sitePassword(env: { SITE_PASSWORD?: string; NODE_ENV?: string } = process.env): string | null {
+  const p = env.SITE_PASSWORD ?? ""
+  if (!p) return null
+  if (env.NODE_ENV === "production" && p.length < MIN_PASSWORD_LENGTH) return null
+  return p
+}
 export const SESSION_DAYS = 7
 const VERSION = "v1"
 const enc = new TextEncoder()

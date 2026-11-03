@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { SESSION_COOKIE, verifySession } from "@/lib/infra/auth"
+import { SESSION_COOKIE, sitePassword, verifySession } from "@/lib/infra/auth"
 
 // Every route, including /api, needs the signed session cookie from /login.
-// The password is the SITE_PASSWORD secret. Without it, production refuses
-// every request and development stays open.
+// The password is the SITE_PASSWORD secret (at least 16 characters in production).
+// Without it, production refuses every request and development stays open.
 
 const PUBLIC = new Set(["/login", "/api/login"])
 
 export async function proxy(request: NextRequest) {
-  const password = process.env.SITE_PASSWORD
+  const password = sitePassword()
   if (!password) {
     if (process.env.NODE_ENV === "production") return new NextResponse("Not configured.", { status: 503 })
     return NextResponse.next()

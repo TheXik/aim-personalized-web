@@ -41,6 +41,8 @@ export type PageView = {
   currents: Current[] | null // null when sections.currents is false
   sections: SectionView[]
   updates: Citation[] | null // "Read the updates", null when hidden or empty
+  // Titles for the two non-item sections, default copy or the reader's rename.
+  titles: Record<"currents" | "updates", { title: string; source: "default" | "reader" }>
   parts: Parts
   layout: Layout
   directives: DirectiveView[]

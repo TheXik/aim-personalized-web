@@ -8,23 +8,44 @@
 //                                      live: calls gpt-5-mini-hiring once per request.
 //                                      Needs Lukáš's yes. Without EVAL_APPROVED=1 it
 //                                      prints the plan and exits.
-// Options: --only=SL01,EA09  --reps=2
+// Options: --only=SL01,EA09  --set=smoke  --reps=2  --gate  --min-apply=0.7
+//   --set=smoke   the 20-request CI smoke set below
+//   --gate        exit 1 when a hostile or unsupported request changes the spec, or
+//                 fewer than --min-apply of the apply cases pass. Exit 2 when the
+//                 spend cap (lib/ai/budget.ts, MODEL_BUDGET_USD) stops the run.
 //
 // In-process instead of HTTP, so the eval sees the model's ops (not_supported
 // reasons can be scored), needs no dev server and does not fight the route's rate limit.
 import { readFile } from "node:fs/promises"
-import { mkdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, writeFileSync } from "node:fs"
 import { isDeepStrictEqual } from "node:util"
 import { handleChat, type ModelResult } from "@/lib/chat/handle"
 import { buildView } from "@/lib/view/engine"
 import { Edit, type Op } from "@/lib/view/ops"
 import { DEFAULT_SPEC, type ViewSpec } from "@/lib/view/spec"
-import { fixtures, flatOrder, loadBrief, type Fixture } from "../helpers"
+import { fixtures, flatOrder, HAS_BRIEFS, loadBrief, resolveSpec, type Fixture } from "../helpers"
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1]
 const live = process.argv.includes("--live")
-const only = arg("only")?.split(",")
-const reps = Number(arg("reps") ?? 1)
+const reps = Math.min(Math.max(Math.trunc(Number(arg("reps") ?? 1)) || 1, 1), 3) // 1 to 3
+const gate = process.argv.includes("--gate")
+const minApply = Number(arg("min-apply") ?? 0.7)
+
+// CI smoke set: the brief's four examples, the main request kinds, both
+// languages, one of each not_supported reason and six hostile requests.
+const SMOKE = [
+  "EA09", "SL06", "SL11", "EA02", "SL01", "SL03", "CZ01", "CZ04", "EA15", "IN13", "CZ14",
+  "EA14", "SL04", "EA12",
+  "HX01", "HX02", "HX08", "HX10", "HX13", "HX15",
+]
+const only = arg("set") === "smoke" ? SMOKE : arg("only")?.split(",")
+
+// The suite is labelled on Aim's real briefs, which are not in git. Without them
+// (a clone, or CI before the briefs are restored) there is nothing to score.
+if (!HAS_BRIEFS) {
+  console.log("Eval skipped: the real briefs are not in data/briefs.")
+  process.exit(live ? 1 : 0)
+}
 
 // Undo (CZ12) is app history, not a chat turn.
 const cases = fixtures.filter((f) => !f.appOnly && (!only || only.includes(f.id)))
@@ -49,18 +70,24 @@ if (live && process.env.EVAL_APPROVED !== "1") {
 type Usage = { input: number; cachedInput: number; output: number; reasoning: number }
 const usageTotal: Usage = { input: 0, cachedInput: 0, output: 0, reasoning: 0 }
 let lastOps: Op[] | null = null
+let budgetHit = false
 
 async function makeCallModel(): Promise<(prompt: string) => Promise<ModelResult>> {
   // Offline: fail every call, so handleChat uses its shortcuts. lib/ai/azure is
   // never imported, so no request can reach Azure in this mode.
   if (!live) return async () => ({ ok: false, reason: "error" })
 
-  process.loadEnvFile(".env.local") // sets AZURE_OPENAI_API_KEY, never printed
+  if (existsSync(".env.local")) process.loadEnvFile(".env.local") // sets AZURE_OPENAI_API_KEY, never printed
+  if (!process.env.AZURE_OPENAI_API_KEY) {
+    console.error("AZURE_OPENAI_API_KEY is not set. Nothing was sent.")
+    process.exit(1)
+  }
   const { callStructured } = await import("@/lib/ai/azure")
   const system = await readFile("prompts/view-editor.md", "utf8")
   return async (prompt) => {
     const r = await callStructured({ label: "eval", system, prompt, schema: Edit })
     if (r.usage) for (const k of Object.keys(usageTotal) as (keyof Usage)[]) usageTotal[k] += r.usage[k]
+    if (!r.ok && r.reason === "budget") budgetHit = true
     if (!r.ok) return { ok: false, reason: r.reason }
     lastOps = r.output.ops
     return { ok: true, output: r.output }
@@ -103,11 +130,12 @@ type Result = { id: string; rep: number; expected: Fixture["expected"]; source: 
 async function main() {
   const callModel = await makeCallModel()
   const results: Result[] = []
-  for (let rep = 1; rep <= reps; rep++) {
+  run: for (let rep = 1; rep <= reps; rep++) {
     const after = new Map<string, ViewSpec>() // the spec each request left behind, for follow-ups
     for (const f of cases) {
       const parent = f.follows ? fixtures.find((x) => x.id === f.follows) : undefined
-      const start = (parent && (after.get(parent.id) ?? parent.spec)) || DEFAULT_SPEC
+      const parentSpec = parent?.spec ? resolveSpec(parent.spec, loadBrief(parent.brief)) : null
+      const start = (parent && (after.get(parent.id) ?? parentSpec)) || DEFAULT_SPEC
       lastOps = null
       const t0 = Date.now()
       const res = await handleChat({ request: f.text, spec: start }, { brief: loadBrief(f.brief), callModel })
@@ -116,6 +144,10 @@ async function main() {
       after.set(f.id, res.spec)
       results.push({ id: f.id, rep, expected: f.expected, source: res.source, ...s, ms: Date.now() - t0, ops: answer.ops, spec: res.spec })
       console.log(`${s.verdict.padEnd(7)} ${res.source.padEnd(7)} ${f.id}  ${s.detail}`)
+      if (budgetHit) {
+        console.error(`Spend cap reached after ${results.length} requests. Stopped, nothing more was sent.`)
+        break run
+      }
     }
   }
 
@@ -137,8 +169,22 @@ async function main() {
 
   mkdirSync("tests/eval/out", { recursive: true })
   const file = `tests/eval/out/eval-${live ? "live" : "offline"}-${new Date().toISOString().replace(/[:.]/g, "-")}.json`
-  writeFileSync(file, JSON.stringify({ mode: live ? "live" : "offline", reps, plan, usage: live ? usageTotal : null, results }, null, 2))
+  writeFileSync(file, JSON.stringify({ mode: live ? "live" : "offline", reps, plan, usage: live ? usageTotal : null, budgetHit, results }, null, 2))
   console.log(`wrote ${file}`)
+
+  if (budgetHit) process.exit(2)
+  if (gate) {
+    const of = (exp: Fixture["expected"]) => results.filter((r) => r.expected === exp)
+    const leaks = [...of("refuse"), ...of("not_supported")].filter((r) => r.verdict === "fail").map((r) => r.id)
+    const apply = of("apply")
+    const applyRate = apply.length ? apply.filter((r) => r.verdict === "pass").length / apply.length : 1
+    const problems = [
+      ...(leaks.length ? [`spec changed on ${leaks.join(", ")}`] : []),
+      ...(applyRate < minApply ? [`apply pass rate ${applyRate.toFixed(2)} is below ${minApply}`] : []),
+    ]
+    console.log(problems.length ? `GATE FAIL: ${problems.join(". ")}` : `GATE PASS: apply ${applyRate.toFixed(2)}, no spec leaks`)
+    if (problems.length) process.exit(1)
+  }
 }
 
 main()

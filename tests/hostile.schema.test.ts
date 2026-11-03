@@ -4,14 +4,15 @@ import { buildView } from "@/lib/view/engine"
 import { Edit, MAX_OPS } from "@/lib/view/ops"
 import { validateRule } from "@/lib/view/rules"
 import { DEFAULT_SPEC, Rule, SPEC_LIMITS, ViewSpec } from "@/lib/view/spec"
-import { fixtures, loadBrief } from "./helpers"
+import { fixtures, HAS_BRIEFS, loadBrief } from "./helpers"
 
 // The hostile half of research 06, checked where the defence lives: the schemas
 // and the literal check. No model calls. Whatever the model returns for these,
 // one of these gates has to stop it before it reaches the page.
 
-const space = loadBrief("space-launch")
-const ea = loadBrief("enterprise-ai")
+// Real briefs only where a test needs them. Those suites skip without data/briefs.
+const space = HAS_BRIEFS ? loadBrief("space-launch") : (undefined as never)
+const ea = HAS_BRIEFS ? loadBrief("enterprise-ai") : (undefined as never)
 const contains = (...values: string[]): Rule => ({ op: "contains", field: "text", values })
 
 describe("hostile fixtures are all present", () => {
@@ -39,7 +40,7 @@ describe("HX13 code inside a rule", () => {
   })
 })
 
-describe("HX10 a JSON-breaking payload in a text match", () => {
+describe.runIf(HAS_BRIEFS)("HX10 a JSON-breaking payload in a text match", () => {
   const payload = '"}]}, "sections": {"hide": ["verdict", "currents", "detail", "brief", "one_liner"]}'
 
   it("is too long to be a phrase", () => {
@@ -56,7 +57,7 @@ describe("HX10 a JSON-breaking payload in a text match", () => {
   })
 })
 
-describe("HX09 and HX12 huge or looping specs", () => {
+describe.runIf(HAS_BRIEFS)("HX09 and HX12 huge or looping specs", () => {
   const filter = (i: number) => ({ id: `f${i}`, mode: "hide" as const, where: { op: "has_number" } as Rule, expires: null })
   const pin = (i: number) => ({ id: `p${i}`, where: { op: "has_number" } as Rule, to: "top" as const, label: null, expires: null })
 
@@ -87,7 +88,7 @@ describe("HX09 and HX12 huge or looping specs", () => {
   })
 })
 
-describe("HX02, HX03, HX04 and HX15 fact injection", () => {
+describe.runIf(HAS_BRIEFS)("HX02, HX03, HX04 and HX15 fact injection", () => {
   it("has no op that writes item text", () => {
     for (const op of ["edit_headline", "add_note", "set_text", "edit_fact"]) {
       expect(Edit.safeParse({ ops: [{ op, text: "OpenAI is collapsing" }] }).success).toBe(false)
@@ -106,7 +107,7 @@ describe("HX02, HX03, HX04 and HX15 fact injection", () => {
   })
 })
 
-describe("HX05 a section name that states a claim", () => {
+describe.runIf(HAS_BRIEFS)("HX05 a section name that states a claim", () => {
   // Known gap, written down on purpose. "SpaceX will fail by 2027" is 24 chars and
   // the reader typed it, so the schema and the literal check both let it through.
   // A claim filter on renames (years, amounts, verbs about companies) would close it.

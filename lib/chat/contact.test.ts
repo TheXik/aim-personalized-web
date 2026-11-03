@@ -88,7 +88,7 @@ describe("the mailto link", () => {
   it("prefills everything needed to reproduce the problem", () => {
     const href = contactMailto({
       request: "summarise it in three bullets",
-      page: "https://aim.lukashellesch.com/r/space-launch",
+      page: "https://aim.lukashellesch.com/brief/space-launch",
       settings: ["Hiding one-liners", "Grouped by company"],
       time: "2026-11-03T12:00:00.000Z",
     })!
@@ -97,13 +97,13 @@ describe("the mailto link", () => {
     expect(params.get("subject")).toBe('Aim brief: "summarise it in three bullets"')
     const body = params.get("body")!
     expect(body).toContain("What I asked: summarise it in three bullets")
-    expect(body).toContain("Page: https://aim.lukashellesch.com/r/space-launch")
+    expect(body).toContain("Page: https://aim.lukashellesch.com/brief/space-launch")
     expect(body).toContain("My settings: Hiding one-liners; Grouped by company")
     expect(body).toContain("Time: 2026-11-03T12:00:00.000Z")
   })
 
   it("works without a request for the always-visible link, and hides without an address", () => {
-    const href = contactMailto({ page: "/r/cz-sk-ai", settings: [], time: "t" })!
+    const href = contactMailto({ page: "/brief/cz-sk-ai", settings: [], time: "t" })!
     expect(new URLSearchParams(href.slice(href.indexOf("?") + 1)).get("subject")).toBe("Aim brief feedback")
     expect(contactMailto({ page: "/", settings: [], time: "t" }, "")).toBeNull()
     expect(contactLine()).toBe("Not what you needed? Tell Lukáš directly. He reads every message and fixes it fast.")

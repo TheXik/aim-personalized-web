@@ -17,7 +17,7 @@ export function generateStaticParams() {
   return READERS.map((reader) => ({ reader }))
 }
 
-export default function ReaderPage(props: PageProps<"/r/[reader]">) {
+export default function ReaderPage(props: PageProps<"/brief/[reader]">) {
   return (
     <Suspense fallback={<BriefLoading />}>
       <Reader params={props.params} />
@@ -25,7 +25,7 @@ export default function ReaderPage(props: PageProps<"/r/[reader]">) {
   )
 }
 
-async function Reader({ params }: { params: PageProps<"/r/[reader]">["params"] }) {
+async function Reader({ params }: { params: PageProps<"/brief/[reader]">["params"] }) {
   const { reader } = await params
   if (!isReaderSlug(reader)) notFound()
   const parsed = TagsFile.safeParse(rawTags(reader))

@@ -13,7 +13,7 @@ export default function Home() {
       <ul className="flex flex-col gap-3">
         {READERS.map((r) => (
           <li key={r.slug}>
-            <Link className="text-lg font-semibold underline-offset-4 hover:underline" href={`/r/${r.slug}`}>
+            <Link className="text-lg font-semibold underline-offset-4 hover:underline" href={`/brief/${r.slug}`}>
               {r.name}
             </Link>
           </li>

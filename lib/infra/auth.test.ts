@@ -38,8 +38,8 @@ describe("password and session", () => {
   })
 
   it("only redirects to same-site paths after sign-in", () => {
-    expect(safeNext("/r/space-launch?x=1")).toBe("/r/space-launch?x=1")
-    expect(safeNext("/r/cz-sk-ai#top")).toBe("/r/cz-sk-ai#top")
+    expect(safeNext("/brief/space-launch?x=1")).toBe("/brief/space-launch?x=1")
+    expect(safeNext("/brief/cz-sk-ai#top")).toBe("/brief/cz-sk-ai#top")
     const bad = [
       "//evil.example", "/\\evil.example", "https://evil.example", "evil", "/login", "/login?next=/x", "/api/chat",
       "/\t/evil.example", "/\n/evil.example", "/\r//evil.example", "/\u0000/evil.example", "\t//evil.example",
@@ -63,9 +63,9 @@ describe("proxy", () => {
     new NextRequest(`${SITE}${path}`, { headers: cookie ? { cookie: `${SESSION_COOKIE}=${cookie}` } : {} })
 
   it("sends pages to /login and keeps where the reader was going", async () => {
-    const res = await proxy(req("/r/space-launch"))
+    const res = await proxy(req("/brief/space-launch"))
     expect(res.status).toBe(307)
-    expect(res.headers.get("location")).toBe(`${SITE}/login?next=%2Fr%2Fspace-launch`)
+    expect(res.headers.get("location")).toBe(`${SITE}/login?next=%2Fbrief%2Fspace-launch`)
   })
 
   it("answers the API with 401, including the chat", async () => {
@@ -95,7 +95,7 @@ describe("proxy", () => {
 
   it("sends plain HTTP to HTTPS in production, before anything else", async () => {
     vi.stubEnv("NODE_ENV", "production")
-    for (const path of ["/login?next=%2Fr%2Fcz-sk-ai", "/api/login", "/r/space-launch"]) {
+    for (const path of ["/login?next=%2Fbrief%2Fcz-sk-ai", "/api/login", "/brief/space-launch"]) {
       const res = await proxy(new NextRequest(`http://aim.lukashellesch.com${path}`))
       expect(res.status).toBe(308)
       expect(res.headers.get("location")).toBe(`https://aim.lukashellesch.com${path}`)
@@ -122,9 +122,9 @@ describe("POST /api/login", () => {
     login(new Request(`${SITE}/api/login`, { method: "POST", body: new URLSearchParams(fields) }))
 
   it("the right password sets a secure session cookie and goes to next", async () => {
-    const res = await post({ password: PW, next: "/r/cz-sk-ai" })
+    const res = await post({ password: PW, next: "/brief/cz-sk-ai" })
     expect(res.status).toBe(303)
-    expect(res.headers.get("location")).toBe(`${SITE}/r/cz-sk-ai`)
+    expect(res.headers.get("location")).toBe(`${SITE}/brief/cz-sk-ai`)
     const cookie = res.headers.get("set-cookie")!
     expect(cookie).toMatch(new RegExp(`^${SESSION_COOKIE}=v1\\.`))
     expect(cookie).toMatch(/HttpOnly/i)
@@ -135,9 +135,9 @@ describe("POST /api/login", () => {
   })
 
   it("a wrong password goes back to /login with an error and no cookie", async () => {
-    const res = await post({ password: "nope", next: "/r/cz-sk-ai" })
+    const res = await post({ password: "nope", next: "/brief/cz-sk-ai" })
     expect(res.status).toBe(303)
-    expect(res.headers.get("location")).toBe(`${SITE}/login?error=1&next=%2Fr%2Fcz-sk-ai`)
+    expect(res.headers.get("location")).toBe(`${SITE}/login?error=1&next=%2Fbrief%2Fcz-sk-ai`)
     expect(res.headers.get("set-cookie")).toBeNull()
   })
 
@@ -156,5 +156,12 @@ describe("sitePassword", () => {
     expect(sitePassword({ SITE_PASSWORD: "a-long-random-password-23", NODE_ENV: "production" })).toBe("a-long-random-password-23")
     expect(sitePassword({ SITE_PASSWORD: "", NODE_ENV: "production" })).toBeNull()
     expect(sitePassword({ SITE_PASSWORD: "short-pass", NODE_ENV: "development" })).toBe("short-pass")
+  })
+})
+
+describe("old reader links", () => {
+  it("/r/<reader> redirects permanently to /brief/<reader>", async () => {
+    const config = (await import("@/next.config")).default
+    expect(await config.redirects?.()).toContainEqual({ source: "/r/:path*", destination: "/brief/:path*", permanent: true })
   })
 })

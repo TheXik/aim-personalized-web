@@ -17,6 +17,11 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The reader page moved from /r/<reader> to /brief/<reader>. Old links keep
+  // working through a permanent redirect, which runs before the password gate.
+  async redirects() {
+    return [{ source: "/r/:path*", destination: "/brief/:path*", permanent: true }]
+  },
   async headers() {
     return [
       {

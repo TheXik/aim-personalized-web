@@ -19,6 +19,12 @@ const SHORTCUTS: { re: RegExp; ops: ApplicableOp[] }[] = [
   { re: /\bheadlines only\b|\bjust (the )?headlines\b/i, ops: [{ op: "parts", paragraphs: "none", means: false, figures: null, sources: null, oneLiners: null }] },
   { re: /\bnewest first\b|\blatest first\b/i, ops: [{ op: "order", by: "newest" }] },
   {
+    // "Old" means not new this week: updated or carried-over stories. Their
+    // thread cards go too, because a card only shows while it has a story.
+    re: /\b(hide|remove|drop|no|without) (the )?(old|older|stale) (threads?|currents?|stories|news|items)\b/i,
+    ops: [{ op: "filter", mode: "hide", where: { op: "in", field: "status", values: ["updated", "carried"] }, duration: "standing" }],
+  },
+  {
     re: /\b(hide|remove|drop|no|without) (the )?(threads?|currents?)( to follow)?\b/i,
     ops: [{ op: "sections", currents: false, updates: null }],
   },

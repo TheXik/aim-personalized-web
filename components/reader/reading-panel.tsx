@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { Citation, Current, Item, Link } from "@/lib/brief/types"
 import type { Parts } from "@/lib/view/spec"
 import { Figure } from "@/components/figures/figure"
@@ -310,25 +310,45 @@ function MoreBody({
 }
 
 /**
- * Links into Aim, worded as in Aim's email: updates as numbered chips,
- * signals as "Open the signal ›". Every link opens the exact item in Aim's app.
+ * Links into Aim on one calm line, worded as in Aim's email: "Open the signal ›" for the
+ * first signal (or "Open the source ›" when there is no signal), and "N more sources" that
+ * opens a compact numbered list, signals first, then updates. Every link opens the item in Aim.
  */
 export function Sources({ links }: { links: Link[]; label?: string }) {
-  const updates = links.filter((l) => !l.id.startsWith("sig_"))
+  const [open, setOpen] = useState(false)
   const signals = links.filter((l) => l.id.startsWith("sig_"))
+  const updates = links.filter((l) => !l.id.startsWith("sig_"))
+  const ordered = [...signals, ...updates]
+  if (ordered.length === 0) return null
+  const [first, ...rest] = ordered
+  const kind = (l: Link) => (l.id.startsWith("sig_") ? "Signal" : "Update")
   return (
     <div className="src">
-      {updates.length > 0 ? <span className="eyebrow src__label">{updates.length === 1 ? "Source" : "Sources"}</span> : null}
-      {updates.map((l, i) => (
-        <a key={l.id} className="src__chip" href={l.href} target="_blank" rel="noreferrer" aria-label={`Source ${i + 1}, opens in Aim`}>
-          {i + 1}
+      <div className="src__line">
+        <a className="src__signal" href={first.href} target="_blank" rel="noreferrer">
+          {first.id.startsWith("sig_") ? "Open the signal ›" : "Open the source ›"}
         </a>
-      ))}
-      {signals.map((l, i) => (
-        <a key={l.id} className="src__signal" href={l.href} target="_blank" rel="noreferrer">
-          {signals.length === 1 ? "Open the signal ›" : `Open signal ${i + 1} ›`}
-        </a>
-      ))}
+        {rest.length > 0 ? (
+          <button type="button" className="src__more" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {rest.length} more {rest.length === 1 ? "source" : "sources"}
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true" className={open ? "is-open" : undefined}>
+              <path d="M3 4.5 6 7.5 9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
+      {open ? (
+        <ol className="src__list">
+          {rest.map((l, i) => (
+            <li key={l.id}>
+              <a href={l.href} target="_blank" rel="noreferrer">
+                <span className="src__n">{i + 2}</span>
+                {kind(l)} in Aim ›
+              </a>
+            </li>
+          ))}
+        </ol>
+      ) : null}
     </div>
   )
 }

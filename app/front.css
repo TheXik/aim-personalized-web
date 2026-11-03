@@ -462,3 +462,18 @@
 }
 /* Chat footer: "Tell Lukáš · Unmet requests are logged without IP." reads as one line. */
 .chat__foot { display: block; text-align: left; color: var(--b-faint); }
+
+/* Sources on one calm line: "Open the signal ›" and "N more sources", then a compact list. */
+.src { display: block; }
+.src__line { display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+.src__more {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 13px; color: var(--b-muted);
+}
+.src__more:hover { color: var(--b-ink); }
+.src__more svg { transition: transform 200ms var(--ease-out); }
+.src__more svg.is-open { transform: rotate(180deg); }
+.src__list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.src__list a { display: inline-flex; align-items: baseline; gap: 10px; padding: 3px 0; font-size: 13px; color: var(--b-meta); text-decoration: none; }
+.src__list a:hover { color: var(--b-ink); }
+.src__n { min-width: 16px; font-family: var(--b-mono); font-size: 11px; color: var(--b-faint); text-align: right; }

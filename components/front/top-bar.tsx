@@ -13,7 +13,6 @@ import { formatRange } from "@/components/brief/format"
 export function TopBar({
   periodStart,
   periodEnd,
-  minutes,
   changes,
   hidden,
   chatOpen,
@@ -24,7 +23,6 @@ export function TopBar({
 }: {
   periodStart: string
   periodEnd: string
-  minutes: number
   changes: number
   hidden: number
   chatOpen: boolean
@@ -39,9 +37,9 @@ export function TopBar({
         <AimMark size={22} />
         Aim
       </Link>
-      {/* The email's masthead: "Your market", the reading time, the week. */}
+      {/* The email's masthead: "Your market" and the week. The reading time sits next to "Start reading". */}
       <span className="tb__date">
-        <span className="tb__market">Your market · {minutes} min · </span>
+        <span className="tb__market">Your market · </span>
         {formatRange(periodStart, periodEnd)}
       </span>
       <span className="tb__spacer" />

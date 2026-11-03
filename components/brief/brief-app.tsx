@@ -306,7 +306,6 @@ export function BriefApp({ reader, tags }: { reader: string; readerName: string;
       <TopBar
         periodStart={view.periodStart}
         periodEnd={view.periodEnd}
-        minutes={fp.readingMinutes}
         changes={changes}
         hidden={view.hiddenTotal}
         chatOpen={chatShown}

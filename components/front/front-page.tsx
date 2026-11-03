@@ -69,7 +69,6 @@ function VerdictTag({ asTitle, children, ...rest }: { asTitle: boolean; children
 function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Open }) {
   const first = fp.order[0]
   const threads = fp.threads.length
-  const items = fp.order.length
   // On a phone only the first sentence shows, the rest is one tap away (CSS hides it on wide screens never).
   const [more, setMore] = useState(false)
   const [lead, rest] = splitFirstSentence(view.verdict)
@@ -104,7 +103,7 @@ function Lead({ view, fp, onOpen }: { view: PageView; fp: FrontModel; onOpen: Op
         ) : (
           <span className="fp__count">
             {threads > 0 ? `${threads} ${threads === 1 ? "current" : "currents"} · ` : ""}
-            {items} {items === 1 ? "story" : "stories"}
+            {fp.readingMinutes} min
           </span>
         )}
       </div>

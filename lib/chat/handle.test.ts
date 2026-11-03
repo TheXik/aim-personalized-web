@@ -189,4 +189,10 @@ describe("offline shortcuts", () => {
   it("does not guess", () => {
     expect(matchOffline("only the European players")).toBeNull()
   })
+  it("EA11: never applies a shortcut to only part of a request", () => {
+    expect(matchOffline("Only what's new this week, but keep the OpenAI pause")).toBeNull()
+  })
+  it("chains whole shortcuts", () => {
+    expect(matchOffline("Hide the one-liners and numbers first, please")?.map((o) => o.op)).toEqual(["filter", "pin"])
+  })
 })

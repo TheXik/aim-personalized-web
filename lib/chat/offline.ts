@@ -20,7 +20,27 @@ const SHORTCUTS: { re: RegExp; ops: ApplicableOp[] }[] = [
   { re: /\bnewest first\b|\blatest first\b/i, ops: [{ op: "order", by: "newest" }] },
 ]
 
+// Filler that may surround a shortcut without changing what it means.
+const FILLER = /\b(please|pls|thanks|thank you|can you|could you|just|now|always|for me|the page|it)\b/gi
+
+// A shortcut fires only when every part of the request is one. "Only what's new
+// this week, but keep the OpenAI pause" has a part no shortcut covers, so it
+// gets no shortcut at all rather than a silently partial change.
 export function matchOffline(request: string): ApplicableOp[] | null {
-  const ops = SHORTCUTS.filter((s) => s.re.test(request)).flatMap((s) => s.ops)
-  return ops.length ? ops : null
+  const parts = request
+    .split(/[,;.!?]|\band\b|\bthen\b|\balso\b/i)
+    .map((p) => p.replace(FILLER, " ").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+  if (parts.length === 0) return null
+  const ops: ApplicableOp[] = []
+  for (const part of parts) {
+    const hit = SHORTCUTS.find((s) => {
+      const m = part.match(s.re)
+      // The match has to be the whole part, give or take two leftover words.
+      return m && part.replace(m[0], " ").trim().split(/\s+/).filter(Boolean).length <= 2
+    })
+    if (!hit) return null
+    ops.push(...hit.ops)
+  }
+  return ops
 }

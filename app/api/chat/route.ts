@@ -11,16 +11,27 @@ import { Edit } from "@/lib/view/ops"
 
 const MAX_BODY_BYTES = 16_000
 const WINDOW_MS = 60_000
-const MAX_PER_WINDOW = 8
+const MAX_PER_CLIENT = 8
+// The client key comes from x-forwarded-for, which a caller can spoof. So a
+// global cap bounds total model calls per minute whatever the header says.
+const MAX_GLOBAL = 30
+const MAX_KEYS = 1_000
 const hits = new Map<string, number[]>()
+let globalHits: number[] = []
 
-// Simple in-memory limit per reader and client. Enough for a demo on one server.
+// In-memory limits. Enough for a demo on one server, not for production.
 function allow(key: string): boolean {
   const now = Date.now()
+  globalHits = globalHits.filter((t) => now - t < WINDOW_MS)
+  if (globalHits.length >= MAX_GLOBAL) return false
   const recent = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS)
-  if (recent.length >= MAX_PER_WINDOW) return false
+  if (recent.length >= MAX_PER_CLIENT) return false
   recent.push(now)
+  globalHits.push(now)
+  hits.delete(key)
   hits.set(key, recent)
+  // Bounded memory: drop the oldest keys (Map keeps insertion order).
+  while (hits.size > MAX_KEYS) hits.delete(hits.keys().next().value!)
   return true
 }
 
